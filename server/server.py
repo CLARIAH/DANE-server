@@ -188,4 +188,4 @@ if __name__ == '__main__':
     messageQueue.run()
     handler = SQLHandler(config=cfg, queue=messageQueue)
 
-    app.run(port=cfg['API_PORT'], host=cfg['API_HOST'])
+    app.run(port=cfg['DANE_PORT'], host=cfg['DANE_HOST'])

@@ -1,4 +1,7 @@
 config = {
+        'DANE_HOST' : '0.0.0.0',
+	'DANE_PORT' : 5500,
+
         'RABBITMQ': {
             'host': 'localhost',
             'port': '5672', 
