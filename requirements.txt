@@ -1,0 +1,4 @@
+-e git+https://github.com/CLARIAH/DANE-utils.git#egg=DANE_utils
+Flask==1.1.1
+mysql-connector-python==8.0.18
+pika==1.1.0
