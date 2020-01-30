@@ -11,7 +11,7 @@ import logging
 
 from handlers.SQLHandler import SQLHandler
 from util.RabbitMQUtil import RabbitMQUtil
-from DANE_utils import jobspec
+import DANE
 
 bp = Blueprint('DANE', __name__)
 app = Flask(__name__)
@@ -22,7 +22,7 @@ import settings as settings
 
 cfg = settings.config
 
-logger = logging.getLogger('DANE-core')
+logger = logging.getLogger('DANE-server')
 level = logging.getLevelName(cfg['LOGGING']['level'])
 logger.setLevel(level)
 # create file handler which logs even debug messages
@@ -30,7 +30,7 @@ if not os.path.exists(os.path.realpath(cfg['LOGGING']['dir'])):
     os.mkdir(os.path.realpath(cfg['LOGGING']['dir']))
 
 fh = logging.FileHandler(os.path.join(
-    os.path.realpath(cfg['LOGGING']['dir']), "DANE-core.log"))
+    os.path.realpath(cfg['LOGGING']['dir']), "DANE-server.log"))
 fh.setLevel(level)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -85,7 +85,7 @@ def SubmitJob():
         logger.exception('Unhandled error')
         abort(500) # TODO handle this nicer
 
-    job = jobspec.jobspec.from_json(postData)
+    job = DANE.Job.from_json(postData)
     job.set_api(handler)
     job.register()
     job.run()
@@ -128,9 +128,9 @@ def search(source_id):
 
 @bp.route('/test', methods=["GET"])
 def TestJob():
-    job = jobspec.jobspec(source_url='http://127.0.0.1/example',
+    job = DANE.Job(source_url='http://127.0.0.1/example',
             source_id='ITM123', source_set='NISV',
-            tasks=jobspec.taskSequential(['TEST', 'TEST']))
+            tasks=DANE.taskSequential(['TEST', 'TEST']))
 
     job.set_api(handler)
     job.register()
@@ -153,7 +153,7 @@ def ReadyCheck():
 
     try:
         conn = handler._get_connection()
-    except jobspec.ResourceConnectionError as e:
+    except DANE.errors.ResourceConnectionError as e:
         logging.exception('ReadyCheck ResourceConnectionError')
         states['database'] = False
     except Exception as e:

@@ -10,7 +10,7 @@ import logging
 MAX_RETRY = 8
 RETRY_INTERVAL = 2 # seconds
 
-logger = logging.getLogger('DANE-core')
+logger = logging.getLogger('DANE-server')
 
 class RabbitMQUtil():
 

@@ -6,13 +6,11 @@ import os
 import logging
 from functools import partial
 
-from DANE_utils.base_classes import base_handler
-from DANE_utils import jobspec
-from DANE_utils import errors as DANError
-
+import DANE
+import DANE.base_classes
 import threading
 
-logger = logging.getLogger('DANE-core')
+logger = logging.getLogger('DANE-server')
 
 def createDatabase(cursor, dbname):
     try:
@@ -58,7 +56,7 @@ def createTasksTable(cursor):
             ") ENGINE=InnoDB")
         cursor.execute(tableTasks)
 
-class SQLHandler(base_handler):
+class SQLHandler(DANE.base_classes.base_handler):
 
     def __init__(self, config, queue):  
         super().__init__(config)
@@ -68,7 +66,7 @@ class SQLHandler(base_handler):
 
         self.connect()
         
-        unfinished = self.getUnfinished()
+        unfinished = self.getUnfinished()['jobs']
         if len(unfinished) > 0:
             logger.info("Attempting to resume unfinished jobs")
             for jid in unfinished:
@@ -96,12 +94,12 @@ class SQLHandler(base_handler):
             cursor = conn.cursor(dictionary=True)
         except mariadb.errors.InterfaceError:
             logger.exception("Database unavailable")
-            raise DANError.ResourceConnectionError('Database unavailable, '\
+            raise DANE.errors.ResourceConnectionError('Database unavailable, '\
                     'refer to logs for more details') 
         except mariadb.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                 logger.exception("Invalid login credentials")
-                raise DANError.ResourceConnectionError('Invalid login credentials, '\
+                raise DANE.errors.ResourceConnectionError('Invalid login credentials, '\
                     'refer to logs for more details') 
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 conn = mariadb.connect(**dbconfig)
@@ -121,7 +119,7 @@ class SQLHandler(base_handler):
                 createTasksTable(cursor)
             except mariadb.Error as err:
                 logger.exception("Table creation failed")
-                raise DANError.ResourceConnectionError('DB creation failed, '\
+                raise DANE.errors.ResourceConnectionError('DB creation failed, '\
                     'refer to logs for more details') 
                     
             cursor.close()
@@ -132,7 +130,7 @@ class SQLHandler(base_handler):
             conn = self.pool.get_connection()
         except mariadb.errors.InterfaceError as e:
             logger.exception("Database unavailable")
-            raise DANError.ResourceConnectionError('Database unavailable, '\
+            raise DANE.errors.ResourceConnectionError('Database unavailable, '\
                     'refer to logs for more details')
         except Exception as e:
             logger.exception("Unhandled SQL error")
@@ -266,13 +264,12 @@ class SQLHandler(base_handler):
             raise mariadb.Error('No getTaskKey result!')
 
     def _set_task_states(self, states, task):
-        if isinstance(task, jobspec.Task):
-            tid = task.task_id
-            for s in states:
-                if s['task_id'] == tid:
-                    task.task_state = int(s['task_state'])
-                    task.task_msg = s['task_msg']
-                    return
+        tid = task.task_id
+        for s in states:
+            if s['task_id'] == tid:
+                task.task_state = int(s['task_state'])
+                task.task_msg = s['task_msg']
+                return
 
     def _jobFromResult(self, result, get_state=False):
         result['tasks'] = json.loads(result['tasks'])
@@ -280,7 +277,7 @@ class SQLHandler(base_handler):
         result['metadata'] = json.loads(result['metadata'])
         result['response'] = json.loads(result['response'])
 
-        job = jobspec.jobspec.from_json(json.dumps(result))
+        job = DANE.Job.from_json(json.dumps(result))
         job.set_api(self)
 
         if get_state:
@@ -296,7 +293,7 @@ class SQLHandler(base_handler):
             conn.close()
 
             partf = partial(self._set_task_states, task_states)
-            job.tasks.apply(partf)
+            job.apply(partf)
 
         return job
 
@@ -458,4 +455,4 @@ class SQLHandler(base_handler):
         cursor.close()
         conn.close()
 
-        return [res['job_id'] for res in result]
+        return {'jobs': [res['job_id'] for res in result]}

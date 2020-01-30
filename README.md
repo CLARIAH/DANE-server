@@ -3,55 +3,68 @@
 The DANE ecosystem is designed to enable easy deployment and rapid prototyping of compute intensive workers,
 in an environment where batch processing is not feasible and compute resources are either limited or distributed. 
 
-![DANE-core](https://docs.google.com/drawings/d/e/2PACX-1vRCjKm3O5cqbF5LRlUyC6icAbQ3xmedKvArlY_8h31PJqAu3iZe6Q5qcVbs3rujVoGpzesD00Ck9-Hw/pub?w=953&amp;h=438)
+![DANE-eco](https://docs.google.com/drawings/d/e/2PACX-1vRCjKm3O5cqbF5LRlUyC6icAbQ3xmedKvArlY_8h31PJqAu3iZe6Q5qcVbs3rujVoGpzesD00Ck9-Hw/pub?w=953&amp;h=438)
 
-In essence the DANE ecosystem consists of three parts, 1) The back-end (DANE-core), 2) The compute workers, 3) A client. 
-The format of the communication between these components follows the [job specification format](https://github.com/CLARIAH/DANE-utils/blob/master/DANE_utils/jobspec.py)
+In essence the DANE ecosystem consists of three parts, 1) The back-end (DANE-server), 2) The compute workers, 3) A client. 
+The format of the communication between these components follows the [job specification format](https://dane.readthedocs.io/en/latest/DANE/jobs.html)
 which details the source material to process, the tasks which should be performed, as well as information about the task results.
-Util code to build workers, clients, or work with a job specification is included in the [DANE-utils](https://github.com/CLARIAH/DANE-utils) package.
+Util code to build workers, clients, or work with a job specification is included in the [DANE](https://github.com/CLARIAH/DANE) package.
 
-## DANE-core
-DANE-core is the server, or back-end, component of DANE and takes care of job routing as well as the (meta)data storage. A job submitted to 
-DANE-core is registered in a database, and then its `.run()` function is called. Running a job involves iterating over the tasks, and depending
+## DANE-server
+DANE-server is the back-end, component of DANE and takes care of job routing as well as the (meta)data storage. A job submitted to 
+DANE-server is registered in a database, and then its `.run()` function is called. Running a job involves iterating over the tasks, and depending
 on the structure of the tasks executing them sequentially or in parallel. 
 
 A specific task is run by publishing the job to a [RabbitMQ Topic Exchange](https://www.rabbitmq.com/tutorials/tutorial-five-python.html),
 on this exchange the task is routed based on its Task Key. The task key corresponds to the `binding_key` of a worker,
 and each worker with this binding_key listens to a shared queue. Once a worker is available it will take the next job from the queue and process it.
 
-DANE-core depends on [DANE-utils](https://github.com/CLARIAH/DANE-utils) package for the logic of how to iterate over tasks, and how to interpret a job
+DANE-server depends on the [DANE](https://github.com/CLARIAH/DANE) package for the logic of how to iterate over tasks, and how to interpret a job
 in general.
 
 # Installation
 
-DANE-core has been tested with Python 3.
+DANE-server has been tested with Python 3.
 
-    git clone https://github.com/CLARIAH/DANE-core.git
-    cd DANE-core/
+    git clone https://github.com/CLARIAH/DANE-server.git
+    cd DANE-server/
     pip install -r requirements.txt
 
-Besides the python base, the DANE-core also relies on a [MariaDB](https://mariadb.org/) SQL server (tested with version 10.4) for persistent storage, 
+Besides the python base, the DANE-server also relies on a [MariaDB](https://mariadb.org/) SQL server (version 10.4) for persistent storage, 
 and [RabbitMQ](https://www.rabbitmq.com/) (tested with version 3.7) for messaging.
+
+On Ubuntu 18.04, the MariaDB version in the repo is too low (10.1), so you will need to take measures to install a more recent version.
+Additionally, MariaDB for some reason pretends to be an early version of MySQL, so if you get the error:
+
+```
+MySQL version 5.7.2 and earlier does not support COM_RESET_CONNECTION.
+```
+
+Then you can fix this by adding the following to the `mysqld` block in `/etc/mysql/my.cnf`:
+
+```
+version=5.7.99-10.4.10-MariaDB
+```
 
 After installing all dependencies it is necessary to correctly configure the settings file:
     
-    cd server/ # inside DANE-core/
+    cd server/ # inside DANE-server/
     cp example-settings.py settings.py
 
 Open `settings.py` in your favourite editor and adjust the settings to match your configuration.
 
 # Usage
 
-*NOTE: DANE-core is still in development, as such authorisation (amongst other featueres) has not yet been added. Use at your own peril.*
+*NOTE: DANE-server is still in development, as such authorisation (amongst other featueres) has not yet been added. Use at your own peril.*
 
-Run the DANE-core server as follows:
+Run the DANE-server server as follows:
 
     python3 server.py
 
 If no errors occur then this should start a Flask server which will handle API requests, and in the background the server will handle interaction with the DB and RabbitMQ.
 ## API
 
-DANE-core can be interacted with via a small API that supports a small number of essential calls:
+DANE-server can be interacted with via a small API that supports a small number of essential calls:
 
     /DANE/job/
 
@@ -71,4 +84,4 @@ Return the job_id's for all jobs that have this source_id.
 
 ## Examples
 
-Examples of how to work with DANE can be found at: https://github.com/CLARIAH/DANE-utils/tree/master/examples
+Examples of how to work with DANE can be found at: https://dane.readthedocs.io/en/latest/examples.html
