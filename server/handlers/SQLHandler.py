@@ -29,7 +29,6 @@ def createJobsTable(cursor):
             "  `job_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
             "  `source_url` TEXT NOT NULL,"
             "  `source_id` varchar(100) NOT NULL,"
-            "  `source_set` varchar(512) NOT NULL,"
             "  `priority` varchar(10) NOT NULL,"
             "  `tasks` JSON NOT NULL,"
             "  `metadata` JSON NOT NULL,"
@@ -109,21 +108,25 @@ class SQLHandler(DANE.base_classes.base_handler):
                 self.pool = mariadb.pooling.MySQLConnectionPool(
                         database=myconfig['database'],
                         **dbconfig)
+                cursor.close()
+                conn.close()
             else:
                 raise err
-        else:
-            #Connection established.
-            #Create table if not exist
-            try:
-                createJobsTable(cursor)
-                createTasksTable(cursor)
-            except mariadb.Error as err:
-                logger.exception("Table creation failed")
-                raise DANE.errors.ResourceConnectionError('DB creation failed, '\
-                    'refer to logs for more details') 
-                    
-            cursor.close()
-            conn.close()
+
+        #Create table if not exist
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            createJobsTable(cursor)
+            createTasksTable(cursor)
+        except mariadb.Error as err:
+            logger.exception("Table creation failed")
+            raise DANE.errors.ResourceConnectionError('DB creation failed, '\
+                'refer to logs for more details') 
+
+        cursor.close()
+        conn.close()
 
     def _get_connection(self):
         try:
@@ -140,8 +143,8 @@ class SQLHandler(DANE.base_classes.base_handler):
 
     def get_dirs(self, job):
         # expect that TEMP and OUT folder exist 
-        TEMP_SOURCE = os.path.join(self.config['TEMP_FOLDER'], job.source_set)
-        OUT_SOURCE = os.path.join(self.config['OUT_FOLDER'], job.source_set)
+        TEMP_SOURCE = self.config['TEMP_FOLDER']
+        OUT_SOURCE = self.config['OUT_FOLDER']
 
         if not os.path.exists(TEMP_SOURCE):
             os.mkdir(TEMP_SOURCE)
@@ -170,11 +173,11 @@ class SQLHandler(DANE.base_classes.base_handler):
         cursor = conn.cursor(dictionary=True)
         
         addJobStatement = ("INSERT INTO `danejobs` "
-            "(`source_url`, `source_id`, `source_set`, "
+            "(`source_url`, `source_id`, "
             "`priority`, `tasks`, `metadata`, `response`) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            "VALUES (%s, %s, %s, %s, %s, %s)"
         )        
-        jobData = (job.source_url, job.source_id, job.source_set, 
+        jobData = (job.source_url, job.source_id, 
                 job.priority, job.tasks.to_json(),
                 json.dumps(job.metadata), json.dumps(job.response))
         
@@ -428,13 +431,12 @@ class SQLHandler(DANE.base_classes.base_handler):
         cursor.close()
         conn.close()
 
-    def search(self, source_id, source_set=None):
+    def search(self, source_id):
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        if source_set is None: 
-            query = ("""SELECT job_id FROM `danejobs` WHERE source_id=%s""")
-            cursor.execute(query, (source_id,))
+        query = ("""SELECT job_id FROM `danejobs` WHERE source_id=%s""")
+        cursor.execute(query, (source_id,))
 
         result = cursor.fetchall()
         cursor.close()

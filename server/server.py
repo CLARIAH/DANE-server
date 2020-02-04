@@ -37,7 +37,8 @@ ch = logging.StreamHandler()
 ch.setLevel(level)
 # create formatter and add it to the handlers
 formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        '%(asctime)s - %(levelname)s - %(message)s',
+        "%Y-%m-%d %H:%M:%S")
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
@@ -82,27 +83,46 @@ def SubmitJob():
     try:
         postData = request.data
     except Exception as e:
-        logger.exception('Unhandled error')
+        logger.exception('Error handling post data')
         abort(500) # TODO handle this nicer
 
-    job = DANE.Job.from_json(postData)
-    job.set_api(handler)
-    job.register()
-    job.run()
+    try:
+        job = DANE.Job.from_json(postData)
+    except (TypeError, json.decoder.JSONDecodeError) as e:
+        logger.exception('FormatError')
+        abort(400, 'Invalid job format')
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
 
-    job.refresh()
+    try:
+        job.set_api(handler)
+        job.register()
+        job.run()
+
+        job.refresh()
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+
     return Response(job.to_json(), status=201, mimetype='application/json')
 
 @bp.route('/job/<job_id>', methods=["GET"])
 def GetJob(job_id):
     try:
         job = handler.jobFromJobId(job_id, get_state=True)
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
     except KeyError as e:
         logger.exception('KeyError')
         abort(404) 
     except ValueError as e:
         logger.exception('ValueError')
         abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
     else:
         return Response(job.to_json(), status=200, mimetype='application/json')
 
@@ -111,12 +131,18 @@ def RetryJob(job_id):
     try:
         job = handler.jobFromJobId(job_id, get_state=True)
         job.retry()
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
     except KeyError as e:
         logger.exception('KeyError')
         abort(404) 
     except ValueError as e:
         logger.exception('ValueError')
         abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
     else:
         job.refresh()
         return Response(job.to_json(), status=200, mimetype='application/json')
@@ -129,7 +155,7 @@ def search(source_id):
 @bp.route('/test', methods=["GET"])
 def TestJob():
     job = DANE.Job(source_url='http://127.0.0.1/example',
-            source_id='ITM123', source_set='NISV',
+            source_id='ITM123',
             tasks=DANE.taskSequential(['TEST', 'TEST']))
 
     job.set_api(handler)
