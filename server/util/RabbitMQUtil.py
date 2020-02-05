@@ -94,12 +94,15 @@ class RabbitMQUtil():
     def assign_callback(self, callback):
         self.callback = callback
 
+    def _do_callback(self, *args):
+        return self.callback(*args)
+
     def _on_response(self, ch, method, props, body):
         # TODO find way to decode correctly to JSON
         body = json.loads(body.decode("utf-8"))
 
-        cb = functools.partial(self.callback, 
-                props.correlation_id, json.loads(body))
+        cb = functools.partial(self._do_callback, 
+                props.correlation_id, body)
         self.connection.add_callback_threadsafe(cb)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 

@@ -48,7 +48,7 @@ def createTasksTable(cursor):
             "  `job_id` INT UNSIGNED NOT NULL,"
             "  `task_key` varchar(100) NOT NULL,"
             "  `task_state` varchar(100) NOT NULL,"
-            "  `task_msg` varchar(100),"
+            "  `task_msg` TEXT,"
             "  PRIMARY KEY (`task_id`),"
             "  CONSTRAINT `task_jobs_fk` FOREIGN KEY (`job_id`)"
             "    REFERENCES `danejobs` (`job_id`) ON DELETE CASCADE"  
