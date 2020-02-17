@@ -1,6 +1,7 @@
 from flask import Flask
 from flask import render_template, redirect, url_for, Blueprint, abort
 from flask import request, Response, make_response
+from flask_cors import CORS
 
 from functools import wraps
 
@@ -15,6 +16,7 @@ import DANE
 
 bp = Blueprint('DANE', __name__)
 app = Flask(__name__)
+CORS(app)
 
 app.debug = True
 
@@ -150,6 +152,11 @@ def RetryJob(job_id):
 @bp.route('/job/search/<source_id>', methods=["GET"])
 def search(source_id):
     result = handler.search(source_id=source_id)
+    return Response(json.dumps(result), status=200, mimetype='application/json')
+
+@bp.route('/job/inprogress', methods=["GET"])
+def inprogress():
+    result = handler.getUnfinished()
     return Response(json.dumps(result), status=200, mimetype='application/json')
 
 @bp.route('/test', methods=["GET"])
