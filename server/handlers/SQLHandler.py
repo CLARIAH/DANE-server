@@ -1,5 +1,5 @@
 import mysql.connector as mariadb
-import mysql.connector.pooling
+import mysql.connector.pooling as mypool
 from mysql.connector import errorcode
 import json
 import os
@@ -77,6 +77,8 @@ class SQLHandler(DANE.base_classes.base_handler):
         dbconfig = {
                 'pool_name':"dane-pool",
                 'pool_size': 5,
+                'block': True,
+                'timeout': 5,
                 'user' : myconfig['user'],
                 'password' : myconfig['password'],
                 'host' : myconfig['host'],
@@ -85,7 +87,7 @@ class SQLHandler(DANE.base_classes.base_handler):
 
 	#Check if management DB exists
         try:
-            self.pool = mariadb.pooling.MySQLConnectionPool(
+            self.pool = BlockingMySQLConnectionPool(
                     database=myconfig['database'],
                     **dbconfig)
 
@@ -105,7 +107,7 @@ class SQLHandler(DANE.base_classes.base_handler):
                 cursor = conn.cursor(dictionary=True)
 
                 createDatabase(cursor, myconfig['database'])
-                self.pool = mariadb.pooling.MySQLConnectionPool(
+                self.pool = BlockingMySQLConnectionPool(
                         database=myconfig['database'],
                         **dbconfig)
                 cursor.close()
@@ -134,6 +136,11 @@ class SQLHandler(DANE.base_classes.base_handler):
         except mariadb.errors.InterfaceError as e:
             logger.exception("Database unavailable")
             raise DANE.errors.ResourceConnectionError('Database unavailable, '\
+                    'refer to logs for more details')
+        except mariadb.errors.PoolError as e:
+            logger.exception("ConnectionPool exhausted")
+            raise DANE.errors.ResourceConnectionError('ConnectionPool '\
+                    'exhausted, '\
                     'refer to logs for more details')
         except Exception as e:
             logger.exception("Unhandled SQL error")
@@ -458,3 +465,42 @@ class SQLHandler(DANE.base_classes.base_handler):
         conn.close()
 
         return {'jobs': [res['job_id'] for res in result]}
+
+class BlockingMySQLConnectionPool(mypool.MySQLConnectionPool):
+    """Class defining a pool of MySQL connections, modified to allow for
+    blocking get calls"""
+    def __init__(self, block=True, timeout=None, **kwargs):
+        self.block = block
+        self.timeout = timeout
+        super().__init__(**kwargs)
+
+    def get_connection(self):
+        """Get a connection from the pool
+        This method returns an PooledMySQLConnection instance which
+        has a reference to the pool that created it, and the next available
+        MySQL connection.
+        When the MySQL connection is not connect, a reconnect is attempted.
+        Raises PoolError on errors.
+        Returns a PooledMySQLConnection instance.
+        """
+        try:
+            cnx = self._cnx_queue.get(block=self.block, 
+                    timeout=self.timeout)
+        except mypool.queue.Empty:
+            raise mypool.errors.PoolError(
+                "Failed getting connection; pool exhausted")
+
+        # pylint: disable=W0201,W0212
+        if not cnx.is_connected() \
+                or self._config_version != cnx._pool_config_version:
+            cnx.config(**self._cnx_config)
+            try:
+                cnx.reconnect()
+            except mypool.errors.InterfaceError:
+                # Failed to reconnect, give connection back to pool
+                self._queue_connection(cnx)
+                raise
+            cnx._pool_config_version = self._config_version
+        # pylint: enable=W0201,W0212
+
+        return mypool.PooledMySQLConnection(self, cnx)

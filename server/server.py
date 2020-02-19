@@ -112,6 +112,7 @@ def SubmitJob():
 @bp.route('/job/<job_id>', methods=["GET"])
 def GetJob(job_id):
     try:
+        job_id = int(job_id)
         job = handler.jobFromJobId(job_id, get_state=True)
     except TypeError as e:
         logger.exception('TypeError')
@@ -163,7 +164,7 @@ def inprogress():
 def TestJob():
     job = DANE.Job(source_url='http://127.0.0.1/example',
             source_id='ITM123',
-            tasks=DANE.taskSequential(['TEST', 'TEST']))
+            tasks=DANE.taskSequential(['TEST', DANE.taskParallel(['TEST', DANE.taskSequential(['TEST', DANE.taskParallel(['TEST', 'FOO'])])])]))
 
     job.set_api(handler)
     job.register()
@@ -221,4 +222,4 @@ if __name__ == '__main__':
     messageQueue.run()
     handler = SQLHandler(config=cfg, queue=messageQueue)
 
-    app.run(port=cfg['DANE_PORT'], host=cfg['DANE_HOST'])
+    app.run(port=cfg['DANE_PORT'], host=cfg['DANE_HOST'], use_reloader=False)
