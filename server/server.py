@@ -1,5 +1,5 @@
 from flask import Flask
-from flask import render_template, redirect, url_for, Blueprint, abort
+from flask import render_template, redirect, url_for, Blueprint, abort, send_from_directory
 from flask import request, Response, make_response
 from flask_cors import CORS
 
@@ -15,7 +15,8 @@ from util.RabbitMQUtil import RabbitMQUtil
 import DANE
 
 bp = Blueprint('DANE', __name__)
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/manage', 
+        static_folder="management")
 CORS(app)
 
 app.debug = True
@@ -208,6 +209,21 @@ def ReadyCheck():
             states[service] = "502 Bad Gateway"
 
     return Response(json.dumps(states), status=200 if overall else 500, mimetype='application/json')
+
+"""------------------------------------------------------------------------------
+DANE web admin thingy
+------------------------------------------------------------------------------"""
+
+@app.route('/js/<path:path>')
+def send_js(path):
+    return send_from_directory('js', path)
+
+@app.route('/manage/')
+def manager():
+    return app.send_static_file('index.html')
+
+"""------------------------------------------------------------------------------
+------------------------------------------------------------------------------"""
 
 app.register_blueprint(bp, url_prefix='/DANE')
 
