@@ -69,7 +69,6 @@ class SQLHandler(DANE.base_classes.base_handler):
         th.daemon = True
         th.start()
         
-        
     def connect(self):
         myconfig = self.config['MARIADB']
         dbconfig = {

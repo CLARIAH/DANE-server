@@ -237,7 +237,8 @@ if __name__ == '__main__':
 
     # should these be global vars?
     messageQueue = RabbitMQUtil(cfg)
-    messageQueue.run()
     handler = SQLHandler(config=cfg, queue=messageQueue)
+    # only run queue after SQL handler is ready to receive work
+    messageQueue.run()
 
     app.run(port=cfg['DANE_PORT'], host=cfg['DANE_HOST'], use_reloader=False)
