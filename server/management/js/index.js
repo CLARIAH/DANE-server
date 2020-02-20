@@ -75,7 +75,11 @@ Vue.component('dane-jobslist', {
         fl = Array.from(new Set(fl));
       } 
       this.filteredList = fl;
-    }, 500)  },
+    }, 500),
+    page: function () {
+      this.panels = [];
+    }
+  },
   computed: {
     jobsList: function() {
       let jl = [];
@@ -231,8 +235,11 @@ Vue.component('dane-newjob', {
   }
 })
 
+var loc = window.location;
+var baseUrl = loc.protocol + "//" + loc.hostname + (loc.port? ":"+loc.port : "") + "/"
+
 var Config = {
-  API: 'http://localhost:5500/DANE/'
+  API: new URL('/DANE/', baseUrl).href
 }
 
 var vm = new Vue({

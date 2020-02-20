@@ -165,7 +165,8 @@ def inprogress():
 def TestJob():
     job = DANE.Job(source_url='http://127.0.0.1/example',
             source_id='ITM123',
-            tasks=DANE.taskSequential(['TEST', DANE.taskParallel(['TEST', DANE.taskSequential(['TEST', DANE.taskParallel(['TEST', 'FOO'])])])]))
+            tasks=DANE.taskSequential(['TEST', 
+                DANE.taskParallel(['TEST', 'FOO'])]))
 
     job.set_api(handler)
     job.register()
@@ -208,7 +209,8 @@ def ReadyCheck():
         else:
             states[service] = "502 Bad Gateway"
 
-    return Response(json.dumps(states), status=200 if overall else 500, mimetype='application/json')
+    return Response(json.dumps(states), 
+            status=200 if overall else 500, mimetype='application/json')
 
 """------------------------------------------------------------------------------
 DANE web admin thingy

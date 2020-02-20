@@ -64,13 +64,11 @@ class SQLHandler(DANE.base_classes.base_handler):
         self.config = config
 
         self.connect()
+
+        th = threading.Timer(interval=3, function=self._resume_unfinished)
+        th.daemon = True
+        th.start()
         
-        unfinished = self.getUnfinished()['jobs']
-        if len(unfinished) > 0:
-            logger.info("Attempting to resume unfinished jobs")
-            for jid in unfinished:
-                job = self.jobFromJobId(jid)
-                job.retry()
         
     def connect(self):
         myconfig = self.config['MARIADB']
@@ -147,6 +145,14 @@ class SQLHandler(DANE.base_classes.base_handler):
             raise e
         else:
             return conn
+
+    def _resume_unfinished(self):
+        unfinished = self.getUnfinished()['jobs']
+        if len(unfinished) > 0:
+            logger.info("Attempting to resume unfinished jobs")
+            for jid in unfinished:
+                job = self.jobFromJobId(jid)
+                job.retry()
 
     def get_dirs(self, job):
         # expect that TEMP and OUT folder exist 
