@@ -16,7 +16,7 @@ import DANE
 
 bp = Blueprint('DANE', __name__)
 app = Flask(__name__, static_url_path='/manage', 
-        static_folder="management")
+        static_folder="web")
 CORS(app)
 
 app.debug = True
@@ -133,8 +133,9 @@ def GetJob(job_id):
 @bp.route('/job/<job_id>/retry', methods=["GET"])
 def RetryJob(job_id):
     try:
+        job_id = int(job_id)
         job = handler.jobFromJobId(job_id, get_state=True)
-        job.retry()
+        job.retry().refresh()
     except TypeError as e:
         logger.exception('TypeError')
         abort(500)
@@ -148,7 +149,6 @@ def RetryJob(job_id):
         logger.exception('Unhandled Error')
         abort(500)
     else:
-        job.refresh()
         return Response(job.to_json(), status=200, mimetype='application/json')
 
 @bp.route('/job/search/<source_id>', methods=["GET"])
@@ -160,6 +160,47 @@ def search(source_id):
 def inprogress():
     result = handler.getUnfinished()
     return Response(json.dumps(result), status=200, mimetype='application/json')
+
+@bp.route('/task/<task_id>', methods=["GET"])
+def GetTask(task_id):
+    try:
+        task_id = int(task_id)
+        task = handler.taskFromTaskId(task_id)
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return Response(task.to_json(), status=200, mimetype='application/json')
+
+@bp.route('/task/<task_id>/retry', methods=["GET"])
+def RetryTask(task_id):
+    try:
+        task_id = int(task_id)
+        task = handler.taskFromTaskId(task_id)
+        task.retry(force=True).refresh()
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return Response(task.to_json(), status=200, mimetype='application/json')
 
 @bp.route('/test', methods=["GET"])
 def TestJob():

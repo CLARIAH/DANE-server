@@ -239,11 +239,11 @@ class SQLHandler(DANE.base_classes.base_handler):
 
         return task_id
 
-    def getTaskState(self, task_id):
+    def taskFromTaskId(self, task_id):
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
 
-        query = ("""SELECT `task_state` FROM `danetasks`
+        query = ("""SELECT * FROM `danetasks`
                  WHERE `task_id`=%s""")
         
         cursor.execute(query, (int(task_id),))
@@ -253,30 +253,20 @@ class SQLHandler(DANE.base_classes.base_handler):
         conn.close()
 
         if result is not None:
-            return int(result['task_state'])
+            task_str = json.dumps({'Task' : result})
+            task = DANE.Task.from_json(task_str)
+            task.set_api(self)
+            return task
         else:
             logging.error(
-                    "No getTaskState result for task_id: {}".format(task_id))
-            raise mariadb.Error('No getTaskState result!')
+                    "No taskFromTaskId result for task_id: {}".format(task_id))
+            raise KeyError("No result for given task id")
 
-    def getTaskKey(self, task_id): # TODO refactor this and one above
-        conn = self._get_connection()
-        cursor = conn.cursor(dictionary=True)
+    def getTaskState(self, task_id):
+        return int(self.taskFromTaskId(task_id).task_state)
 
-        query = ("""SELECT `task_key` FROM `danetasks` WHERE `task_id`=%s""")
-        
-        cursor.execute(query, (int(task_id),))
-        
-        result = cursor.fetchone()
-        cursor.close()
-        conn.close()
-
-        if result is not None:
-            return result['task_key']
-        else:
-            logging.error(
-                    "No getTaskKey result for task_id: {}".format(task_id))
-            raise mariadb.Error('No getTaskKey result!')
+    def getTaskKey(self, task_id): 
+        return self.taskFromTaskId(task_id).task_key
 
     def _set_task_states(self, states, task):
         tid = task.task_id
@@ -383,10 +373,11 @@ class SQLHandler(DANE.base_classes.base_handler):
             # and job resubmission once issue has been resolved
             pass
 
-    def retry(self, task_id):
+    def retry(self, task_id, force=False):
         task_state = self.getTaskState(task_id)
-        if task_state not in [102, 200]:
+        if task_state not in [102, 200] or Force:
             # Unless its already been queued or completed, we can run this again
+            # Or we can force it to run again
             self._run(task_id)
 
     def callback(self, task_id, response):

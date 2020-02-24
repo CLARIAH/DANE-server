@@ -26,7 +26,6 @@ Vue.component('dane-jobslist', {
       page: 1
     }
   }, 
-
   created: function() {
       this.load();
     },
@@ -62,24 +61,6 @@ Vue.component('dane-jobslist', {
       this.refresh();
     }
   },
-  watch: {
-    searchList: debounce(function () {
-      fl = []
-      if (this.searchList.length > 0) {
-        fl = this.searchList.replace(/([,\s]+$)/g, '').split(',').map(
-          job => parseInt(job)
-        )
-        .filter(
-          job => Number.isInteger(job) && job > 0
-        ).sort(function (a, b) {  return a - b;  });
-        fl = Array.from(new Set(fl));
-      } 
-      this.filteredList = fl;
-    }, 500),
-    page: function () {
-      this.panels = [];
-    }
-  },
   computed: {
     jobsList: function() {
       let jl = [];
@@ -93,8 +74,37 @@ Vue.component('dane-jobslist', {
         this.page = 1;
       }
       return jl.slice(this.perPage * (this.page-1), 
-        this.perPage * this.page);
+              this.perPage * this.page);
     }
+  },
+  watch: {
+    searchList: debounce(function () {
+      fl = []
+      if (this.searchList.length > 0) {
+        fl = this.searchList.replace(/([,\s]+$)/g, '').split(',').map(
+          job => parseInt(job)
+        )
+        .filter(
+          job => Number.isInteger(job) && job > 0
+        ).sort(function (a, b) {  return a - b;  });
+        fl = Array.from(new Set(fl));
+      } 
+      let eq = true;
+      if (fl.length == this.filteredList.length) {
+        eq = fl.every((n, i) => {
+          return n == this.filteredList[i];
+        });
+      } else {
+        eq = false;
+      }
+      if (!eq) {
+        this.panels = [];
+      }
+      this.filteredList = fl;
+    }, 500),
+    page: function () {
+      this.panels = [];
+    },
   }
 })
         
@@ -120,6 +130,10 @@ Vue.component('dane-job', {
   },
 
   methods: {
+    refresh: function() {
+      this.job = {};
+      this.load();
+    },
     load: function() {
       if (Object.keys(this.job).length > 0) { return; }
       fetch(new URL(`job/${this.idx}`, Config.API).href) 
@@ -164,7 +178,7 @@ Vue.component('dane-job', {
       .catch(error => {
         this.attempts++;
         if (this.attempts < 5) {
-          setTimeout(this.load, 500 * Math.pow(2, this.attempts));
+          setTimeout(this.retry, 500 * Math.pow(2, this.attempts));
         } else {
           throw error;
         }
@@ -184,6 +198,31 @@ Vue.component('dane-taskcontainer', {
   computed: {
     task: function () {
       return Object.keys(this.tasks)[0];
+    }
+  },
+  methods: {
+    forceRetry: function(task_id) {
+      fetch(new URL(`task/${task_id}/retry`, Config.API).href) 
+      .then((resp) => {
+        if (!resp.ok) {
+          throw Error(resp.statusText, resp.status);
+        }
+        return resp.json() 
+      })
+      .then(data => {
+        this.attempts = 0;
+        this.$emit('refresh');
+      })
+      .catch(error => {
+        this.attempts++;
+        if (this.attempts < 5) {
+          setTimeout(this.forceRetry, 
+            500 * Math.pow(2, this.attempts),
+            task_id);
+        } else {
+          throw error;
+        }
+      })
     }
   }
 })

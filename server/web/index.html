@@ -144,7 +144,7 @@
               <tr><td>Source url:</td><td><a :href="job.source_url" target="_blank">{{job.source_url}}</a></td></tr>
               <tr><td>Priority:</td><td>{{job.priority}}</td></tr>
               <tr><td>Tasks:</td><td>
-                  <v-card is="dane-taskcontainer" :tasks="job.tasks"></v-card>
+                  <v-card is="dane-taskcontainer" :tasks="job.tasks" v-on:refresh="refresh"></v-card>
               </td></tr>
               <tr><td>Metadata:</td><td>
                       <pre>{{job.metadata}}</pre>
@@ -196,11 +196,14 @@
             <tr><td>Id:</td><td>{{task_details.task_id}}</td></tr>
             <tr><td>State:</td><td>{{task_details.task_state}}</td></tr>
             <tr><td>Message:</td><td>{{task_details.task_msg}}</td></tr>
+            <tr><td colspan="2" class="pa-2">
+              <v-btn @click='forceRetry(task_details.task_id)' small color="warning">Force retry task</v-btn>
+            </td></tr>
         </table>
         </v-simple-table>
     </v-sheet>
     <v-sheet v-else-if="Object.keys(task_details).length == 1">
-        <v-card is="dane-taskcontainer" :tasks="task_details"></v-card>
+        <v-card is="dane-taskcontainer" :tasks="task_details" v-on:refresh="$emit('refresh')"></v-card>
     </v-sheet>
     </v-card-text>
     </v-card>
