@@ -375,7 +375,7 @@ class SQLHandler(DANE.base_classes.base_handler):
 
     def retry(self, task_id, force=False):
         task_state = self.getTaskState(task_id)
-        if task_state not in [102, 200] or Force:
+        if task_state not in [102, 200] or force:
             # Unless its already been queued or completed, we can run this again
             # Or we can force it to run again
             self._run(task_id)
