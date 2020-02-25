@@ -61,7 +61,6 @@ class SQLHandler(DANE.base_classes.base_handler):
         super().__init__(config)
         self.queue = queue
         self.queue.assign_callback(self.callback)
-        self.config = config
 
         self.connect()
 

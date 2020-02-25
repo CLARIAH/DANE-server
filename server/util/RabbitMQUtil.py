@@ -95,7 +95,10 @@ class RabbitMQUtil():
         self.callback = callback
 
     def _do_callback(self, *args):
-        return self.callback(*args)
+        try:
+            return self.callback(*args)
+        except Exception as e:
+            logger.exception('Unhandled callback error')
 
     def _on_response(self, ch, method, props, body):
         # TODO find way to decode correctly to JSON
