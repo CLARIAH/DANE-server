@@ -23,7 +23,7 @@ def createJobsTable(cursor):
     cursor.execute("SHOW TABLES LIKE 'danejobs'")
     result = cursor.fetchone()
     if not result:
-        logging.debug('Jobs table not found. Creating..')
+        logger.debug('Jobs table not found. Creating..')
         tableMasterJobs = (
             "CREATE TABLE IF NOT EXISTS `danejobs` ("	
             "  `job_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -41,7 +41,7 @@ def createTasksTable(cursor):
     cursor.execute("SHOW TABLES LIKE 'danetasks'")
     result = cursor.fetchone()
     if not result:
-        logging.debug('Tasks table not found. Creating..')
+        logger.debug('Tasks table not found. Creating..')
         tableTasks = (
             "CREATE TABLE IF NOT EXISTS `danetasks` ("
             "  `task_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,"
@@ -205,7 +205,7 @@ class SQLHandler(DANE.base_classes.base_handler):
 
     def delete_job(self, job):
         if job.job_id is None:
-            logging.error("Can only delete registered jobs")
+            logger.error("Can only delete registered jobs")
             raise KeyError("Failed to delete unregistered job")
 
         conn = self._get_connection()
@@ -275,8 +275,6 @@ class SQLHandler(DANE.base_classes.base_handler):
             task.set_api(self)
             return task
         else:
-            logging.error(
-                    "No taskFromTaskId result for task_id: {}".format(task_id))
             raise KeyError("No result for given task id")
 
     def getTaskState(self, task_id):
@@ -333,8 +331,6 @@ class SQLHandler(DANE.base_classes.base_handler):
         if result is not None:
             return self._jobFromResult(result, get_state)
         else:
-            logging.error(
-                    "No jobFromJobId result for job_id: {}".format(job_id))
             raise KeyError("No result for given job id")
 
     def jobFromTaskId(self, task_id):
@@ -352,8 +348,6 @@ class SQLHandler(DANE.base_classes.base_handler):
         if result is not None:
             return self._jobFromResult(result)
         else:
-            logging.error(
-                    "No jobFromTaskId result for task_id: {}".format(task_id))
             raise KeyError("No result for given task id")
 
     def _run(self, task_id):
@@ -398,30 +392,34 @@ class SQLHandler(DANE.base_classes.base_handler):
             self._run(task_id)
 
     def callback(self, task_id, response):
-        task_key = self.getTaskKey(task_id)
+        try:
+            task_key = self.getTaskKey(task_id)
 
-        state = int(response.pop('state'))
-        message = response.pop('message')
+            state = int(response.pop('state'))
+            message = response.pop('message')
 
-        if state != 200:
-            logger.warning("Task {} [{}] failed with msg: #{} {}".format(
-                task_key, task_id, state, message))            
-        else:
-            logger.info("Callback for task {} ({})".format(task_id, task_key))
+            if state != 200:
+                logger.warning("Task {} [{}] failed with msg: #{} {}".format(
+                    task_key, task_id, state, message))            
+            else:
+                logger.info("Callback for task {} ({})".format(task_id, task_key))
 
-        job = self.jobFromTaskId(task_id)
-        job.set_api(self)
+            job = self.jobFromTaskId(task_id)
+            job.set_api(self)
 
-        resp = { task_key : response } 
-        if task_key in job.response.keys():
-            # There is a previous response, but it might be different
-            if response == job.response[task_key]:
-                # Nope, identical, dont add
-                resp = None
+            resp = { task_key : response } 
+            if task_key in job.response.keys():
+                # There is a previous response, but it might be different
+                if response == job.response[task_key]:
+                    # Nope, identical, dont add
+                    resp = None
 
-        self.updateTaskState(task_id, state, message, resp)
-
-        job.run()
+            self.updateTaskState(task_id, state, message, resp)
+            job.run()
+        except KeyError as e:
+            logger.exception('Callback on non-existing job')
+        except Exception as e:
+            logger.exception('Unhandled error during callback')
 
     def updateTaskState(self, task_id, state, message, response=None):        
         conn = self._get_connection()
@@ -476,7 +474,7 @@ class SQLHandler(DANE.base_classes.base_handler):
 
         query = ("SELECT job_id FROM `danejobs` WHERE job_id = "
                 "ANY(SELECT job_id FROM `danetasks` "
-                "WHERE `task_state` NOT IN (102, 200))")
+                "WHERE `task_state` NOT IN (200))")
 
         cursor.execute(query)
         result = cursor.fetchall()
