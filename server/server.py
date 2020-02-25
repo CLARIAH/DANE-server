@@ -151,6 +151,27 @@ def RetryJob(job_id):
     else:
         return Response(job.to_json(), status=200, mimetype='application/json')
 
+@bp.route('/job/<job_id>/delete', methods=["GET"])
+def DeleteJob(job_id):
+    try:
+        job_id = int(job_id)
+        job = handler.jobFromJobId(job_id, get_state=True)
+        job.delete()
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return ('', 200)
+
 @bp.route('/job/search/<source_id>', methods=["GET"])
 def search(source_id):
     result = handler.search(source_id=source_id)
@@ -181,12 +202,33 @@ def GetTask(task_id):
     else:
         return Response(task.to_json(), status=200, mimetype='application/json')
 
-@bp.route('/task/<task_id>/retry', methods=["GET"])
+@bp.route('/task/<task_id>/forceretry', methods=["GET"])
 def RetryTask(task_id):
     try:
         task_id = int(task_id)
         task = handler.taskFromTaskId(task_id)
         task.retry(force=True).refresh()
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return Response(task.to_json(), status=200, mimetype='application/json')
+
+@bp.route('/task/<task_id>/reset', methods=["GET"])
+def ResetTask(task_id):
+    try:
+        task_id = int(task_id)
+        task = handler.taskFromTaskId(task_id)
+        task.reset().refresh()
     except TypeError as e:
         logger.exception('TypeError')
         abort(500)

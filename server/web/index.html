@@ -56,14 +56,16 @@
 
         <v-container fluid v-else>
         <v-expansion-panels multiple active-class="hide-active-header" v-model="panels"> 
-        <v-expansion-panel is="dane-job-panel" v-for="idx in jobsList" :idx="idx" v-bind:key="idx"></v-expansion-panel>
+        <v-expansion-panel is="dane-job-panel" v-for="idx in jobsList" 
+          v-on:deletedjob="deleteJob"
+          :idx="idx" v-bind:key="idx"></v-expansion-panel>
         </v-expansion-panels> 
         
           <v-container>
             <v-pagination
               v-model="page"
               :length="pages"
-              total-visible="8"
+              total-visible="10"
             ></v-pagination>
           </v-container>
         </v-container>
@@ -72,54 +74,12 @@
     </v-container>
 </template>
 
-<template id="dane-newjob">
-  <v-sheet>
-    <v-dialog v-model="dialog" max-width="600px">
-      <template v-slot:activator="{ on }">
-      <v-btn icon v-on="on"><v-icon>mdi-plus-circle</v-icon></v-btn>
-      </template>
-      <v-card>
-        <v-card-title>
-          <span class="headline">New job</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-row>
-              <v-col cols="12" sm="6">
-                <v-text-field label="Source id*" required></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-text-field label="Source url*" required></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-textarea
-                  filled
-                  name="input-7-4"
-                  label="Task JSON*"
-                  required
-                ></v-textarea>
-              </v-col>
-            </v-row>
-          </v-container>
-          <small>*indicates required field</small>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="dialog = false">Close</v-btn>
-          <v-btn color="blue darken-1" text @click="dialog = false">Submit</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-   </v-sheet>
-</template>
-
-
 <template id="dane-job-panel">
   <v-expansion-panel>
         <v-expansion-panel-header class="subtitle-1">Job #{{idx}}</v-expansion-panel-header>
 
         <v-expansion-panel-content>
-          <dane-job :idx="idx" v-bind:key="idx.id"></dane-job>
+          <dane-job :idx="idx" v-on:deletedjob="$emit('deletedjob', idx);"></dane-job>
         </v-expansion-panel-content>
     </v-expansion-panel>
 </template>
@@ -130,12 +90,32 @@
           <v-toolbar dense class="title secondary pr-4">
               Job #{{job.job_id }} details
           <v-spacer></v-spacer>
+
           <v-tooltip bottom>
           <template v-slot:activator="{ on }">
-          <v-btn @click='retry' icon v-on="on"><v-icon>mdi-repeat</v-icon></v-btn>
+          <v-btn @click='refreshJob' icon v-on="on"><v-icon>mdi-refresh</v-icon></v-btn>
           </template>
-          <span>Retry job</span>
+          <span>Refresh</span>
           </v-tooltip>
+
+           <v-menu offset-y>
+                <template v-slot:activator="{ on }">
+                  <v-btn
+                    icon
+                    v-on="on">
+                    <v-icon>mdi-dots-vertical</v-icon>
+                  </v-btn>
+                </template>
+                <v-list dense>
+                  <v-list-item @click="retry">
+                    <v-list-item-title>Retry Job</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item @click="deleteJob">
+                    <v-list-item-title>Delete Job</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+              <confirm ref="confirm"></confirm>
           </v-toolbar>
 
           <v-simple-table>
@@ -144,7 +124,7 @@
               <tr><td>Source url:</td><td><a :href="job.source_url" target="_blank">{{job.source_url}}</a></td></tr>
               <tr><td>Priority:</td><td>{{job.priority}}</td></tr>
               <tr><td>Tasks:</td><td>
-                  <v-card is="dane-taskcontainer" :tasks="job.tasks" v-on:refresh="refresh"></v-card>
+                  <v-card is="dane-taskcontainer" :tasks="job.tasks" v-on:refresh="refreshJob"></v-card>
               </td></tr>
               <tr><td>Metadata:</td><td>
                       <pre>{{job.metadata}}</pre>
@@ -197,6 +177,7 @@
             <tr><td>State:</td><td>{{task_details.task_state}}</td></tr>
             <tr><td>Message:</td><td>{{task_details.task_msg}}</td></tr>
             <tr><td colspan="2" class="pa-2">
+              <v-btn @click='resetState(task_details.task_id)' small color="info">Reset task state</v-btn>
               <v-btn @click='forceRetry(task_details.task_id)' small color="warning">Force retry task</v-btn>
             </td></tr>
         </table>
@@ -224,6 +205,47 @@
       </v-slide-item>
 </template>
 
+<template id="dane-newjob">
+  <v-sheet>
+    <v-dialog v-model="dialog" max-width="600px">
+      <template v-slot:activator="{ on }">
+      <v-btn icon v-on="on"><v-icon>mdi-plus-circle</v-icon></v-btn>
+      </template>
+      <v-card>
+        <v-card-title>
+          <span class="headline">New job</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12" sm="6">
+                <v-text-field label="Source id*" required></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-text-field label="Source url*" required></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea
+                  filled
+                  name="input-7-4"
+                  label="Task JSON*"
+                  required
+                ></v-textarea>
+              </v-col>
+            </v-row>
+          </v-container>
+          <small>*indicates required field</small>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="dialog = false">Close</v-btn>
+          <v-btn color="blue darken-1" text @click="dialog = false">Submit</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+   </v-sheet>
+</template>
+
 <template id="api-form">
   <v-row justify="center">
     <v-dialog persistent v-model="value" max-width="600px">
@@ -248,6 +270,22 @@
       </v-card>
     </v-dialog>
   </v-row>
+</template>
+
+<template id="confirm">
+  <v-dialog v-model="dialog" :max-width="options.width" :style="{ zIndex: options.zIndex }" @keydown.esc="cancel">
+    <v-card>
+      <v-toolbar dark :color="options.color" dense flat>
+        <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
+      </v-toolbar>
+      <v-card-text v-show="!!message" class="pa-4">{{ message }}</v-card-text>
+      <v-card-actions class="pt-0">
+        <v-spacer></v-spacer>
+        <v-btn color="primary darken-1" text @click.native="agree">Yes</v-btn>
+        <v-btn color="grey" text @click.native="cancel">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <style>

@@ -204,6 +204,24 @@ class SQLHandler(DANE.base_classes.base_handler):
         
         return job_id
 
+    def delete_job(self, job):
+        if job.job_id is None:
+            logging.error("Can only delete registered jobs")
+            raise KeyError("Failed to delete unregistered job")
+
+        conn = self._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        delJobStatement = ("""DELETE FROM `danejobs`
+                 WHERE `job_id`=%s""")
+        cursor.execute(delJobStatement, (job.job_id, ))
+        conn.commit()            
+
+        cursor.close()
+        conn.close()
+
+        logger.info("Deleted job #{}".format(job.job_id))
+        
     def propagate_task_ids(self, job):
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
@@ -357,7 +375,7 @@ class SQLHandler(DANE.base_classes.base_handler):
 
         logger.info("Queueing task {} ({}) of job {}".format(task_id,
             task_key, job.job_id))
-        self._update_state(task_id, 102, 'Queued', None)
+        self.updateTaskState(task_id, 102, 'Queued', None)
         self.queue.publish(routing_key, task_id, job)
 
     def run(self, task_id):
@@ -392,15 +410,21 @@ class SQLHandler(DANE.base_classes.base_handler):
         else:
             logger.info("Callback for task {} ({})".format(task_id, task_key))
 
-        resp = { task_key : response } # group response by task_key
-
-        self._update_state(task_id, state, message, resp)
-
         job = self.jobFromTaskId(task_id)
         job.set_api(self)
+
+        resp = { task_key : response } 
+        if task_key in job.response.keys():
+            # There is a previous response, but it might be different
+            if response == job.response[task_key]:
+                # Nope, identical, dont add
+                resp = None
+
+        self.updateTaskState(task_id, state, message, resp)
+
         job.run()
 
-    def _update_state(self, task_id, state, message, response):        
+    def updateTaskState(self, task_id, state, message, response=None):        
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
         
@@ -421,10 +445,10 @@ class SQLHandler(DANE.base_classes.base_handler):
                     (json.dumps(response), state, 
                         message, task_id))
         else:
-            updateStatement = ("UPDATE `danejobs` as jobs, `danetasks` as tasks "
+            updateStatement = ("UPDATE `danetasks` as tasks "
                 "SET tasks.task_state = %s, "
                 "tasks.task_msg = %s "
-                "WHERE tasks.task_id=%s AND jobs.job_id = tasks.job_id"
+                "WHERE tasks.task_id=%s"
             )        
 
             cursor.execute(updateStatement, 

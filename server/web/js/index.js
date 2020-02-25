@@ -14,8 +14,8 @@ Vue.component('dane-jobslist', {
   template: '#dane-jobslist',
   data: function() {
     return {
-      _jobsList: [],
-      searchList: [],
+      allJobs: [],
+      searchList: "",
       filteredList: [],
       panels: [],
       loading: true,
@@ -39,7 +39,7 @@ Vue.component('dane-jobslist', {
           return resp.json() 
         })
         .then(data => {
-          this._jobsList = data['jobs'];
+          this.allJobs = data['jobs'];
           this.loading = false;
           })
         .catch(error => {
@@ -57,8 +57,14 @@ Vue.component('dane-jobslist', {
     },
     updateAPI: function(api) {
       Config.API = api;
-      this.errored= false;
+      this.errored = false;
       this.refresh();
+    },
+    deleteJob: function(idx) {
+      const index = this.allJobs.indexOf(idx);
+      if (index > -1) {
+        this.$delete(this.allJobs, index);
+      }
     }
   },
   computed: {
@@ -67,7 +73,7 @@ Vue.component('dane-jobslist', {
       if (this.filteredList.length > 0) {
         jl = this.filteredList;
       } else {
-        jl = this._jobsList;
+        jl = this.allJobs;
       }
       this.pages = Math.ceil(jl.length / this.perPage);
       if (this.page > this.pages) {
@@ -130,7 +136,7 @@ Vue.component('dane-job', {
   },
 
   methods: {
-    refresh: function() {
+    refreshJob: function() {
       this.job = {};
       this.load();
     },
@@ -183,6 +189,34 @@ Vue.component('dane-job', {
           throw error;
         }
       })
+    },
+    deleteJob: function() {
+      this.$refs.confirm.open('Delete job', 'Are you sure you want to delete this job?', 
+        { color: 'warning' }).then((confirm) => {
+          if (confirm) {
+            fetch(new URL(`job/${this.idx}/delete`, Config.API).href) 
+              .then((resp) => {
+                if (!resp.ok) {
+                  throw Error(resp.statusText, resp.status);
+                }
+                this.job = {};
+                this.$emit('deletedjob')
+              })
+            .catch(error => {
+              if (error.fileName == 404) {
+                this.errored = true;
+                throw error
+              }
+              this.attempts++;
+              if (this.attempts < 5) {
+                setTimeout(this.load, (500 * Math.pow(2, this.attempts)));
+              } else {
+                this.errored = true;
+                throw error;
+              }
+            })
+          }
+        })
     }
   }
 })
@@ -202,7 +236,30 @@ Vue.component('dane-taskcontainer', {
   },
   methods: {
     forceRetry: function(task_id) {
-      fetch(new URL(`task/${task_id}/retry`, Config.API).href) 
+      fetch(new URL(`task/${task_id}/forceretry`, Config.API).href) 
+      .then((resp) => {
+        if (!resp.ok) {
+          throw Error(resp.statusText, resp.status);
+        }
+        return resp.json() 
+      })
+      .then(data => {
+        this.attempts = 0;
+        this.$emit('refresh');
+      })
+      .catch(error => {
+        this.attempts++;
+        if (this.attempts < 5) {
+          setTimeout(this.forceRetry, 
+            500 * Math.pow(2, this.attempts),
+            task_id);
+        } else {
+          throw error;
+        }
+      })
+    },
+    resetState: function(task_id) {
+      fetch(new URL(`task/${task_id}/reset`, Config.API).href) 
       .then((resp) => {
         if (!resp.ok) {
           throw Error(resp.statusText, resp.status);
@@ -273,6 +330,43 @@ Vue.component('dane-newjob', {
     }
   }
 })
+
+// https://gist.github.com/eolant/ba0f8a5c9135d1a146e1db575276177d
+Vue.component('confirm', {
+  template: '#confirm',
+  data: () => ({
+    dialog: false,
+    resolve: null,
+    reject: null,
+    message: null,
+    title: null,
+    options: {
+      color: 'primary',
+      width: 290,
+      zIndex: 200
+    }
+  }),
+  methods: {
+    open(title, message, options) {
+      this.dialog = true
+      this.title = title
+      this.message = message
+      this.options = Object.assign(this.options, options)
+      return new Promise((resolve, reject) => {
+        this.resolve = resolve
+        this.reject = reject
+      })
+    },
+    agree() {
+      this.resolve(true)
+      this.dialog = false
+    },
+    cancel() {
+      this.resolve(false)
+      this.dialog = false
+    }
+  }
+});
 
 var loc = window.location;
 var baseUrl = loc.protocol + "//" + loc.hostname + (loc.port? ":"+loc.port : "") + "/"
