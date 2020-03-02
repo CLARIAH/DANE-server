@@ -40,7 +40,7 @@
           v-model="searchList"
           ></v-text-field>
       <v-spacer></v-spacer>
-      <dane-newjob></dane-newjob>
+      <dane-newjob v-on:refresh="refresh"></dane-newjob>
          </v-toolbar>
 
       <v-container fluid class="grey lighten-5">
@@ -162,6 +162,14 @@
     <v-card-text>
     <v-slide-group center-active show-arrows class="mb-3">
       <v-slide-item
+        v-if="task == 'Task'"
+        is="dane-task" :task="tasks" 
+        v-on:details="task_details = $event"
+      >
+      </v-slide-item>
+
+      <v-slide-item
+        v-else
         v-for="t in tasks[task]"
         :key="t.task_id"
         is="dane-task" :task="t" 
@@ -219,16 +227,17 @@
           <v-container>
             <v-row>
               <v-col cols="12" sm="6">
-                <v-text-field label="Source id*" required></v-text-field>
+                <v-text-field label="Source id*" required v-model="source_id"></v-text-field>
               </v-col>
               <v-col cols="12">
-                <v-text-field label="Source url*" required></v-text-field>
+                <v-text-field label="Source url*" required v-model="source_url"></v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-textarea
                   filled
                   name="input-7-4"
                   label="Task JSON*"
+                  v-model="tasks"
                   required
                 ></v-textarea>
               </v-col>
@@ -239,7 +248,7 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="blue darken-1" text @click="dialog = false">Close</v-btn>
-          <v-btn color="blue darken-1" text @click="dialog = false">Submit</v-btn>
+          <v-btn color="blue darken-1" text @click="newjob()">Submit</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

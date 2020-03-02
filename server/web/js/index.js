@@ -229,6 +229,11 @@ Vue.component('dane-taskcontainer', {
         task_details: {}
     }
   },
+  created: function() {
+      if (this.task == 'Task') {
+        this.task_details = this.tasks['Task'];
+      }
+    },
   computed: {
     task: function () {
       return Object.keys(this.tasks)[0];
@@ -323,10 +328,34 @@ Vue.component('dane-newjob', {
   template: '#dane-newjob',
   data: () => ({
       dialog: false,
+      source_id: '',
+      source_url: '',
+      tasks: ''
     }),
   methods: {
     newjob : function() {
-      alert('pressed');
+      fetch(new URL('job', Config.API).href, {
+        method: 'post',
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 'source_url': this.source_url,
+          'source_id': this.source_id, 
+          'tasks': JSON.parse(this.tasks)})
+      })
+      .then((resp) => {
+        if (!resp.ok) {
+          throw Error(resp.statusText, resp.status);
+        }
+        return resp.json() 
+      })
+      .then(res => {
+        this.dialog = false; 
+        this.$emit('refresh')
+      }).catch(error => {
+        alert(error);
+      })
     }
   }
 })
