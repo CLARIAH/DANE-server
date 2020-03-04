@@ -8,5 +8,5 @@ LOGGING:
     DIR: "./LOGS/",
     LEVEL: "DEBUG",
 DANE_server:
-	TEMP_FOLDER: "/home/nanne/workspace/DANE-ecosystem/DANE-data/TEMP/",
-	OUT_FOLDER: "/home/nanne/workspace/DANE-ecosystem/DANE-data/OUT/"
+    TEMP_FOLDER: "/home/DANE/DANE-data/TEMP/",
+    OUT_FOLDER: "/home/DANE/DANE-data/OUT/"
