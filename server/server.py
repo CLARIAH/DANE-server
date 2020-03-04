@@ -1,7 +1,6 @@
 from flask import Flask
 from flask import render_template, redirect, url_for, Blueprint, abort, send_from_directory
 from flask import request, Response, make_response
-from flask_cors import CORS
 
 from functools import wraps
 
@@ -18,21 +17,20 @@ from DANE.config import cfg
 bp = Blueprint('DANE', __name__)
 app = Flask(__name__, static_url_path='/manage', 
         static_folder="web")
-CORS(app)
 
 app.debug = True
 
 logger = logging.getLogger('DANE-server')
 level = logging.getLevelName(cfg['LOGGING']['level'])
 logger.setLevel(level)
-# create file handler which logs even debug messages
+# create file handler which logs to file
 if not os.path.exists(os.path.realpath(cfg['LOGGING']['dir'])):
     os.mkdir(os.path.realpath(cfg['LOGGING']['dir']))
 
 fh = logging.FileHandler(os.path.join(
     os.path.realpath(cfg['LOGGING']['dir']), "DANE-server.log"))
 fh.setLevel(level)
-# create console handler with a higher log level
+# create console handler 
 ch = logging.StreamHandler()
 ch.setLevel(level)
 # create formatter and add it to the handlers
@@ -240,20 +238,6 @@ def ResetTask(task_id):
         abort(500)
     else:
         return Response(task.to_json(), status=200, mimetype='application/json')
-
-@bp.route('/test', methods=["GET"])
-def TestJob():
-    job = DANE.Job(source_url='http://127.0.0.1/example',
-            source_id='ITM123',
-            tasks=DANE.taskSequential(['TEST', 
-                DANE.taskParallel(['TEST', 'FOO'])]))
-
-    job.set_api(handler)
-    job.register()
-    job.run()
-
-    job.refresh()
-    return Response(job.to_json(), status=201, mimetype='application/json')
 
 """------------------------------------------------------------------------------
 DevOPs checks

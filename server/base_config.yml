@@ -1,0 +1,12 @@
+MARIADB: 
+    USER: 'new_user'
+    PASSWORD: 'new_password'
+    HOST: 'localhost'
+    PORT: '3306'
+    DATABASE: 'DANE-sql-store'
+LOGGING: 
+    DIR: "./LOGS/"
+    LEVEL: "DEBUG"
+DANE_server:
+    TEMP_FOLDER: "/home/DANE/DANE-data/TEMP/"
+    OUT_FOLDER: "/home/DANE/DANE-data/OUT/"
