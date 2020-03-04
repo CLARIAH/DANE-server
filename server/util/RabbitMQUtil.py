@@ -26,15 +26,15 @@ class RabbitMQUtil():
         if not hasattr(self, 'connection') or \
             not self.connection or self.connection.is_closed:
             credentials = pika.PlainCredentials(
-                    self.config['RABBITMQ']['user'], 
-                    self.config['RABBITMQ']['password'])
+                    self.config.RABBITMQ.USER, 
+                    self.config.RABBITMQ.PASSWORD)
 
             try:
                 self.connection = pika.BlockingConnection(
                     pika.ConnectionParameters(
                         credentials=credentials,
-                        host=self.config['RABBITMQ']['host'],
-                        port=self.config['RABBITMQ']['port']))
+                        host=self.config.RABBITMQ.HOST,
+                        port=self.config.RABBITMQ.PORT))
             except (pika.exceptions.AMQPConnectionError, 
                     pika.exceptions.ConnectionClosedByBroker) as e:
                 self.retry += 1
@@ -56,15 +56,15 @@ class RabbitMQUtil():
                 self.pub_channel.confirm_delivery()
 
                 self.channel.exchange_declare(
-                        exchange=self.config['RABBITMQ']['exchange'], 
+                        exchange=self.config.RABBITMQ.EXCHANGE, 
                         exchange_type='topic')
 
                 self.channel.queue_declare(
-                        queue=self.config['RABBITMQ']['response_queue'], 
+                        queue=self.config.RABBITMQ.RESPONSE_QUEUE, 
                         durable=True)
 
                 self.channel.basic_consume(
-                    queue=self.config['RABBITMQ']['response_queue'],
+                    queue=self.config.RABBITMQ.RESPONSE_QUEUE,
                     on_message_callback=self._on_response,
                     auto_ack=False)
 
@@ -113,10 +113,10 @@ class RabbitMQUtil():
         with self.internal_lock:
             try:
                 self.pub_channel.basic_publish(
-                    exchange=self.config['RABBITMQ']['exchange'],
+                    exchange=self.config.RABBITMQ.EXCHANGE,
                     routing_key=routing_key,
                     properties=pika.BasicProperties(
-                        reply_to=self.config['RABBITMQ']['response_queue'],
+                        reply_to=self.config.RABBITMQ.RESPONSE_QUEUE,
                         correlation_id=str(task_id),
                         priority=int(job.priority),
                         delivery_mode=2

@@ -69,22 +69,22 @@ class SQLHandler(DANE.base_classes.base_handler):
         th.start()
         
     def connect(self):
-        myconfig = self.config['MARIADB']
+        myconfig = self.MARIADB
         dbconfig = {
                 'pool_name':"dane-pool",
                 'pool_size': 5,
                 'block': True,
                 'timeout': 5,
-                'user' : myconfig['user'],
-                'password' : myconfig['password'],
-                'host' : myconfig['host'],
-                'port' : myconfig['port']
+                'user' : myconfig.USER,
+                'password' : myconfig.PASSWORD,
+                'host' : myconfig.HOST,
+                'port' : myconfig.PORT
             }
 
 	#Check if management DB exists
         try:
             self.pool = BlockingMySQLConnectionPool(
-                    database=myconfig['database'],
+                    database=myconfig.DATABASE,
                     **dbconfig)
 
             conn = self._get_connection()
@@ -102,9 +102,9 @@ class SQLHandler(DANE.base_classes.base_handler):
                 conn = mariadb.connect(**dbconfig)
                 cursor = conn.cursor(dictionary=True)
 
-                createDatabase(cursor, myconfig['database'])
+                createDatabase(cursor, myconfig.DATABASE)
                 self.pool = BlockingMySQLConnectionPool(
-                        database=myconfig['database'],
+                        database=myconfig.DATABASE,
                         **dbconfig)
                 cursor.close()
                 conn.close()
@@ -154,8 +154,8 @@ class SQLHandler(DANE.base_classes.base_handler):
 
     def get_dirs(self, job):
         # expect that TEMP and OUT folder exist 
-        TEMP_SOURCE = self.config['TEMP_FOLDER']
-        OUT_SOURCE = self.config['OUT_FOLDER']
+        TEMP_SOURCE = self.config.DANE_SERVER.TEMP_FOLDER
+        OUT_SOURCE = self.config.DANE_SERVER.OUT_FOLDER
 
         if not os.path.exists(TEMP_SOURCE):
             os.mkdir(TEMP_SOURCE)
