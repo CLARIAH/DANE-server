@@ -69,7 +69,7 @@ class SQLHandler(DANE.base_classes.base_handler):
         th.start()
         
     def connect(self):
-        myconfig = self.MARIADB
+        myconfig = self.config.MARIADB
         dbconfig = {
                 'pool_name':"dane-pool",
                 'pool_size': 5,
