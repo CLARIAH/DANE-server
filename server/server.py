@@ -21,14 +21,14 @@ app = Flask(__name__, static_url_path='/manage',
 app.debug = True
 
 logger = logging.getLogger('DANE-server')
-level = logging.getLevelName(cfg['LOGGING']['level'])
+level = logging.getLevelName(cfg.LOGGING.LEVEL)
 logger.setLevel(level)
 # create file handler which logs to file
-if not os.path.exists(os.path.realpath(cfg['LOGGING']['dir'])):
-    os.mkdir(os.path.realpath(cfg['LOGGING']['dir']))
+if not os.path.exists(os.path.realpath(cfg.LOGGING.DIR)):
+    os.mkdir(os.path.realpath(cfg.LOGGING.DIR))
 
 fh = logging.FileHandler(os.path.join(
-    os.path.realpath(cfg['LOGGING']['dir']), "DANE-server.log"))
+    os.path.realpath(cfg.LOGGING.DIR), "DANE-server.log"))
 fh.setLevel(level)
 # create console handler 
 ch = logging.StreamHandler()

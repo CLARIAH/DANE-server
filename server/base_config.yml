@@ -7,6 +7,6 @@ MARIADB:
 LOGGING: 
     DIR: "./LOGS/"
     LEVEL: "DEBUG"
-DANE_server:
+DANE_SERVER:
     TEMP_FOLDER: "/home/DANE/DANE-data/TEMP/"
     OUT_FOLDER: "/home/DANE/DANE-data/OUT/"
