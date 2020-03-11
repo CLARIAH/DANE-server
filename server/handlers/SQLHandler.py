@@ -99,7 +99,9 @@ class SQLHandler(DANE.base_classes.base_handler):
                 raise DANE.errors.ResourceConnectionError('Invalid login credentials, '\
                     'refer to logs for more details') 
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                conn = mariadb.connect(**dbconfig)
+                conn = mariadb.connect(
+                        **{k:v for k,v in dbconfig.items() \
+                                if k not in ['block', 'timeout']})
                 cursor = conn.cursor(dictionary=True)
 
                 createDatabase(cursor, myconfig.DATABASE)
