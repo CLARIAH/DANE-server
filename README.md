@@ -46,12 +46,7 @@ Then you can fix this by adding the following to the `mysqld` block in `/etc/mys
 version=5.7.99-10.4.10-MariaDB
 ```
 
-After installing all dependencies it is necessary to correctly configure the settings file:
-    
-    cd server/ # inside DANE-server/
-    cp example-settings.py settings.py
-
-Open `settings.py` in your favourite editor and adjust the settings to match your configuration.
+After installing all dependencies it is necessary to configure DANE, how to do this is described here: https://dane.readthedocs.io/en/latest/intro.html#configuration
 
 # Usage
 
