@@ -101,7 +101,7 @@ def SubmitJob():
         job.refresh()
     except Exception as e:
         logger.exception('Unhandled Error')
-        abort(500)
+        abort(500, str(e))
 
     return Response(job.to_json(), status=201, mimetype='application/json')
 
