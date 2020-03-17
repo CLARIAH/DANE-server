@@ -5,6 +5,7 @@ import json
 import os
 import logging
 from functools import partial
+from urllib.parse import urlsplit
 
 import DANE
 import DANE.base_classes
@@ -184,6 +185,16 @@ class SQLHandler(DANE.base_classes.base_handler):
     def register_job(self, job):
         conn = self._get_connection()
         cursor = conn.cursor(dictionary=True)
+
+        query = ("""SELECT `source_url` FROM `danejobs` WHERE source_id=%s""")
+        cursor.execute(query, (job.source_id,))
+        result = cursor.fetchall()
+        # normalise the url, so we hopefully dont trip over small irrelevant differences
+        norm_url = urlsplit(job.source_url).geturl()
+
+        for res in result:
+            if urlsplit(res['source_url']).geturl() != norm_url:
+                raise ValueError('This source_id is used with a different source_url')
         
         addJobStatement = ("INSERT INTO `danejobs` "
             "(`source_url`, `source_id`, "
