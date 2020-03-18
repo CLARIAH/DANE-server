@@ -23,14 +23,19 @@
     <v-content class="grey lighten-4">
     <dane-jobslist></dane-jobslist>
     </v-content>
+    <confirm ref="confirm"></confirm>
 </v-app> 
 </div>
 
 <template id="dane-jobslist">
     <v-container>
-        <v-toolbar class="title info pr-4">
-          <span>Jobs overview</span>
-      <v-spacer></v-spacer>
+        <v-toolbar class="info pr-4">
+    <v-container>
+      <v-row>
+          <v-col cols="2" class="pt-4">
+            <span class="title">Jobs overview</span>
+          </v-col>
+          <v-col cols="6">
         <v-text-field
           solo-inverted
           flat
@@ -39,8 +44,29 @@
           prepend-inner-icon="search"
           v-model="searchList"
           ></v-text-field>
-      <v-spacer></v-spacer>
+          </v-col>
+          <v-col cols="2">
+        <v-select
+          :items="bulkActions"
+          label="Bulk action"
+          v-model="bulkAction"
+          solo
+          style="min-height: 0px; max-height: 32px;"
+          v-if="filteredList.length > 0"
+        ></v-select>
+          </v-col>
+          <v-col cols="1" class="pt-4">
+          <v-btn @click='doBulkAction'
+                   v-if="filteredList.length > 0">
+            Go</v-btn>
+          </v-col>
+          <v-col align="right">
+            <v-sheet max-width="50">
       <dane-newjob v-on:refresh="refresh"></dane-newjob>
+            </v-sheet>
+          </v-col>
+      </v-row>
+    </v-container>
          </v-toolbar>
 
       <v-container fluid class="grey lighten-5">
@@ -115,7 +141,6 @@
                   </v-list-item>
                 </v-list>
               </v-menu>
-              <confirm ref="confirm"></confirm>
           </v-toolbar>
 
           <v-simple-table>

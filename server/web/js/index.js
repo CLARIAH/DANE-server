@@ -17,6 +17,8 @@ Vue.component('dane-jobslist', {
       allJobs: [],
       searchList: "",
       filteredList: [],
+      bulkActions: ['Retry', 'Delete'],
+      bulkAction: null,
       panels: [],
       loading: true,
       errored: false,
@@ -65,6 +67,48 @@ Vue.component('dane-jobslist', {
       if (index > -1) {
         this.$delete(this.allJobs, index);
       }
+    },
+    doBulkAction: function() {
+      if (this.bulkAction !== null && this.filteredList.length > 0) {
+        vm.$refs.confirm.open(this.bulkAction, 'Are you sure you want to perform this bulk action on all jobs found?', 
+        { color: 'warning' }).then((confirm) => {
+          if (confirm) {
+            switch (this.bulkAction) {
+              case 'Retry':
+                action = 'retry';
+                break;
+              case 'Delete':
+                action = 'delete';
+                break;
+              default:
+                action = null;
+            }
+            if (action !== null) {
+              this.filteredList.forEach((value, index) => {
+                fetch(new URL(`job/${value}/${action}`, Config.API).href) 
+                  .then((resp) => {
+                    if (!resp.ok) {
+                      throw Error(resp.statusText, resp.status);
+                    }
+                  })
+                .catch(error => {
+                  if (error.fileName == 404) {
+                    //console.log(`BULK ACTION: Job ${value} not found, skipping`);
+                    return;
+                  }
+                  this.attempts++;
+                  if (this.attempts < 5) {
+                    setTimeout(this.load, (500 * Math.pow(2, this.attempts)));
+                  } else {
+                    this.errored = true;
+                    throw error;
+                  }
+                })
+              })
+            }
+          }
+        })
+      }
     }
   },
   computed: {
@@ -91,7 +135,7 @@ Vue.component('dane-jobslist', {
           job => parseInt(job)
         )
         .filter(
-          job => Number.isInteger(job) && job > 0
+          job => Number.isInteger(job) && job > 0 
         ).sort(function (a, b) {  return a - b;  });
         fl = Array.from(new Set(fl));
       } 
@@ -191,7 +235,7 @@ Vue.component('dane-job', {
       })
     },
     deleteJob: function() {
-      this.$refs.confirm.open('Delete job', 'Are you sure you want to delete this job?', 
+      vm.$refs.confirm.open('Delete job', 'Are you sure you want to delete this job?', 
         { color: 'warning' }).then((confirm) => {
           if (confirm) {
             fetch(new URL(`job/${this.idx}/delete`, Config.API).href) 
