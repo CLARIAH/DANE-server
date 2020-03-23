@@ -194,7 +194,25 @@ class SQLHandler(DANE.base_classes.base_handler):
 
         for res in result:
             if urlsplit(res['source_url']).geturl() != norm_url:
-                raise ValueError('This source_id is used with a different source_url')
+                raise ValueError('This source_id is used with a different source_url by another job')
+
+        # If there is an out folder, then check if there is source_url file
+        # if it exists then verify if they match, otherwise create it 
+        # This makes it so we can rely less on the SQL database
+        if 'SHARED' in job.response.keys() and \
+                'OUT_FOLDER' in job.response['SHARED'].keys():
+            url_file = os.path.join(job.response['SHARED']['OUT_FOLDER'], 
+                    'SOURCE_URL.json')
+
+            if os.path.exists(url_file):
+                with open(url_file, 'r') as f:
+                    SOURCE_URL = json.load(f)['source_url']
+                    if SOURCE_URL != norm_url:
+                        raise ValueError('Source url verification mismatch: '\
+                                '{} != {}'. format(norm_url, SOURCE_URL))
+            else:
+                with open(url_file, 'w') as f:
+                    json.dump({'source_url': norm_url}, f)
         
         addJobStatement = ("INSERT INTO `danejobs` "
             "(`source_url`, `source_id`, "
