@@ -58,16 +58,17 @@ def createTasksTable(cursor):
 
 class SQLHandler(DANE.base_classes.base_handler):
 
-    def __init__(self, config, queue):  
+    def __init__(self, config, queue, resume_unfinished=True):  
         super().__init__(config)
         self.queue = queue
         self.queue.assign_callback(self.callback)
 
         self.connect()
 
-        th = threading.Timer(interval=3, function=self._resume_unfinished)
-        th.daemon = True
-        th.start()
+        if resume_unfinished:
+            th = threading.Timer(interval=3, function=self._resume_unfinished)
+            th.daemon = True
+            th.start()
         
     def connect(self):
         myconfig = self.config.MARIADB

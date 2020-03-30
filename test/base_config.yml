@@ -1,0 +1,15 @@
+MARIADB: 
+    USER: 'new_user'
+    PASSWORD: 'new_password'
+    HOST: 'localhost'
+    PORT: '3306'
+    DATABASE: 'DANE-test-store'
+LOGGING: 
+    DIR: "/tmp/LOGS/"
+    LEVEL: "DEBUG"
+DANE_SERVER:
+    TEMP_FOLDER: "/tmp/DANE/TEMP/"
+    OUT_FOLDER: "/tmp/DANE/OUT/"
+RABBITMQ:
+    EXCHANGE: 'DANE-TEST-exchange'
+    RESPONSE_QUEUE: 'DANE-TEST-response-queue'
