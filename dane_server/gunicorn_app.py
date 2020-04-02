@@ -23,7 +23,6 @@ def main():
         'bind': '%s:%s' % (cfg.DANE.HOST, cfg.DANE.PORT),
         'workers': 4, # TODO should make this configable probably
     }
-    print('Launching DANE-server on {}:{}'.format(cfg.DANE.HOST, cfg.DANE.PORT))
     StandaloneApplication(app, options).run()
 
 if __name__ == '__main__':

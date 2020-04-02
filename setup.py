@@ -38,5 +38,5 @@ setup(name='dane-server',
       'Flask',
       'mysql-connector-python',
       'pika',
-      'gunicorn==19.5.0'
+      'gunicorn==19.8.0'
     ])
