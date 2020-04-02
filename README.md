@@ -67,7 +67,7 @@ DANE_SERVER:
 
 *NOTE: DANE-server is still in development, as such authorisation (amongst other featueres) has not yet been added. Use at your own peril.*
 
-Run the DANE-server server as follows:
+Run the DANE-server server as follows (this starts a Gunicorn HTTP server):
 
     dane-server
 

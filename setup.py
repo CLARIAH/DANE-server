@@ -6,7 +6,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='dane-server',
-    version='0.1',
+    version='0.1.1',
     author='Nanne van Noord',
     author_email='n.j.e.vannoord@uva.nl',
     url='https://github.com/CLARIAH/DANE-server',
@@ -27,7 +27,8 @@ setup(name='dane-server',
 
     entry_points = {
         'console_scripts': [
-            'dane-server = dane_server.server:main'
+            'dane-server-flask = dane_server.server:main',
+            'dane-server = dane_server.gunicorn_app:main'
         ]
     },
     package_data = {'dane_server':['base_config.yml', 'web/*', 'web/js/*'] },
@@ -37,4 +38,5 @@ setup(name='dane-server',
       'Flask',
       'mysql-connector-python',
       'pika',
+      'gunicorn==19'
     ])

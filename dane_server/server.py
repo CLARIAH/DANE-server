@@ -316,9 +316,9 @@ if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
 # should these be global vars?
 messageQueue = RabbitMQUtil(cfg)
 handler = SQLHandler(config=cfg, queue=messageQueue)
+messageQueue.run()
 
 def main():
-    messageQueue.run()
     app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=False)
 
 if __name__ == '__main__':
