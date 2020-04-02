@@ -24,11 +24,9 @@ in general.
 
 # Installation
 
-DANE-server has been tested with Python 3.
+DANE-server has been tested with Python 3 and is installable through pip:
 
-    git clone https://github.com/CLARIAH/DANE-server.git
-    cd DANE-server/
-    pip install -r requirements.txt
+    pip install dane-server
 
 Besides the python base, the DANE-server also relies on a [MariaDB](https://mariadb.org/) SQL server (version 10.4) for persistent storage, 
 and [RabbitMQ](https://www.rabbitmq.com/) (tested with version 3.7) for messaging.
@@ -46,7 +44,24 @@ Then you can fix this by adding the following to the `mysqld` block in `/etc/mys
 version=5.7.99-10.4.10-MariaDB
 ```
 
-After installing all dependencies it is necessary to configure DANE, how to do this is described here: https://dane.readthedocs.io/en/latest/intro.html#configuration
+After installing all dependencies it is necessary to configure the DANE server, how to do this is described here: https://dane.readthedocs.io/en/latest/intro.html#configuration
+
+The base config for DANE-server consists of the following parameters, which you might want to overwrite:
+
+```
+MARIADB: 
+    USER: 'new_user'
+    PASSWORD: 'new_password'
+    HOST: 'localhost'
+    PORT: '3306'
+    DATABASE: 'DANE-sql-store'
+LOGGING: 
+    DIR: "./dane-server-logs/"
+    LEVEL: "DEBUG"
+DANE_SERVER:
+    TEMP_FOLDER: "/home/DANE/DANE-data/TEMP/"
+    OUT_FOLDER: "/home/DANE/DANE-data/OUT/"
+```
 
 # Usage
 
@@ -54,9 +69,10 @@ After installing all dependencies it is necessary to configure DANE, how to do t
 
 Run the DANE-server server as follows:
 
-    python3 server.py
+    dane-server
 
-If no errors occur then this should start a Flask server which will handle API requests, and in the background the server will handle interaction with the DB and RabbitMQ.
+If no errors occur then this should start a Flask server (at port 5500) which will handle API requests, and in the background the server will handle interaction with the DB and RabbitMQ.
+
 ## API
 
 DANE-server can be interacted with via a small API that supports a small number of essential calls:
@@ -72,10 +88,30 @@ Get information about an existing job.
     /DANE/job/<job_id>/retry
 
 Resume a job, if it has crashed.
+
+    /DANE/job/<job_id>/delete
+
+Deletes the job
  
     /DANE/search/<source_id>
 
 Return the job_id's for all jobs that have this source_id.
+
+    /DANE/job/inprogress
+
+Returns a list of job_id's for in progress jobs, or jobs which have errored.
+
+    /DANE/task/<task_id>
+
+Get information about this task
+
+    /DANE/task/<task_id>/forceretry
+
+This will force the DANE-server to retry this task, even if it completed successfully or is already queued.
+
+    /DANE/task/<task_id>/reset
+
+Reset the task state to `201`
 
 ## Examples
 

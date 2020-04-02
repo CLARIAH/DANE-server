@@ -409,7 +409,7 @@ class SQLHandler(DANE.base_classes.base_handler):
         task_key = self.getTaskKey(task_id)
         routing_key = "{}.{}".format(filetype, task_key)
 
-        if not self.queue.thread.isAlive():
+        if not self.queue.thread.is_alive():
             logger.critical("MessageQueue no longer handling callbacks")
             raise ConnectionError('MessageQueue no longer handling callbacks.')
 

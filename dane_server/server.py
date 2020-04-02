@@ -24,8 +24,8 @@ import os
 import sys
 import logging
 
-from handlers.SQLHandler import SQLHandler
-from util.RabbitMQUtil import RabbitMQUtil
+from dane_server.handlers.SQLHandler import SQLHandler
+from dane_server.util.RabbitMQUtil import RabbitMQUtil
 import DANE
 from DANE.config import cfg
 
@@ -308,16 +308,18 @@ def manager():
 
 app.register_blueprint(bp, url_prefix='/DANE')
 
-if __name__ == '__main__':
-    if not os.path.exists(cfg.DANE_SERVER.TEMP_FOLDER):
-        os.makedirs(cfg.DANE_SERVER.TEMP_FOLDER)
-    if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
-        os.makedirs(cfg.DANE_SERVER.OUT_FOLDER)
+if not os.path.exists(cfg.DANE_SERVER.TEMP_FOLDER):
+    os.makedirs(cfg.DANE_SERVER.TEMP_FOLDER)
+if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
+    os.makedirs(cfg.DANE_SERVER.OUT_FOLDER)
 
-    # should these be global vars?
-    messageQueue = RabbitMQUtil(cfg)
-    handler = SQLHandler(config=cfg, queue=messageQueue)
-    # only run queue after SQL handler is ready to receive work
+# should these be global vars?
+messageQueue = RabbitMQUtil(cfg)
+handler = SQLHandler(config=cfg, queue=messageQueue)
+
+def main():
     messageQueue.run()
-
     app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=False)
+
+if __name__ == '__main__':
+    main()

@@ -7,9 +7,8 @@ from time import sleep
 import sys
 import os
 
-sys.path.append('../server/')
-from handlers.SQLHandler import SQLHandler
-from util.RabbitMQUtil import RabbitMQUtil
+from dane_server.handlers.SQLHandler import SQLHandler
+from dane_server.util.RabbitMQUtil import RabbitMQUtil
 
 # TODO This creates a test SQL database, and doesnt delete it
 class TestBackend(unittest.TestCase):

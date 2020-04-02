@@ -5,7 +5,7 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-setup(name='DANE-server',
+setup(name='dane-server',
     version='0.1',
     author='Nanne van Noord',
     author_email='n.j.e.vannoord@uva.nl',
@@ -24,6 +24,13 @@ setup(name='DANE-server',
     ],
 
     packages=find_packages(exclude=('test',)),
+
+    entry_points = {
+        'console_scripts': [
+            'dane-server = dane_server.server:main'
+        ]
+    },
+    package_data = {'dane_server':['base_config.yml', 'web/*', 'web/js/*'] },
 
     install_requires=[
       'DANE',
