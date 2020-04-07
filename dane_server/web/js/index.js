@@ -22,8 +22,9 @@ Vue.component('dane-jobslist', {
       panels: [],
       loading: true,
       errored: false,
+      infoDialog: false,
       api: Config.API,
-      perPage: 10,
+      perPage: 20,
       pages: 1,
       page: 1
     }
@@ -56,6 +57,9 @@ Vue.component('dane-jobslist', {
     refresh: function() {
       this.loading = true;
       this.load();
+    },
+    clear: function() {
+      this.searchList = '';
     },
     updateAPI: function(api) {
       Config.API = api;
@@ -105,6 +109,7 @@ Vue.component('dane-jobslist', {
                   }
                 })
               })
+              this.bulkAction = '';
             }
           }
         })
@@ -131,7 +136,25 @@ Vue.component('dane-jobslist', {
     searchList: debounce(function () {
       fl = []
       if (this.searchList.length > 0) {
-        fl = this.searchList.replace(/([,\s]+$)/g, '').split(',').map(
+        fl = this.searchList.replace(/([,\s]+$)/g, '').split(',')
+        let localall = this.allJobs;
+
+        fl.forEach(function(x, i) {
+          if (x.includes(':')) {
+            let parts = x.split(':', 2);
+            let startrange = parseInt(parts[0]);
+            if (isNaN(startrange)) startrange = 1;
+            let endrange = parseInt(parts[1]);
+            if (isNaN(endrange) || endrange < startrange) endrange = Math.max(...localall);
+            if (Number.isInteger(startrange) && Number.isInteger(endrange)) {
+              this[i] = Array.from(new Array(endrange-startrange+1), (y,i) => i + startrange).filter(
+                job => localall.includes(job) 
+              ).join();
+            }
+           }
+        }, fl)
+
+        fl = fl.join().split(',').map(
           job => parseInt(job)
         )
         .filter(
@@ -294,7 +317,7 @@ Vue.component('dane-taskcontainer', {
       })
       .then(data => {
         this.attempts = 0;
-        this.$emit('refresh');
+        this.task_details = data['Task'];
       })
       .catch(error => {
         this.attempts++;
@@ -317,7 +340,7 @@ Vue.component('dane-taskcontainer', {
       })
       .then(data => {
         this.attempts = 0;
-        this.$emit('refresh');
+        this.task_details = data['Task'];
       })
       .catch(error => {
         this.attempts++;
@@ -374,32 +397,43 @@ Vue.component('dane-newjob', {
       dialog: false,
       source_id: '',
       source_url: '',
-      tasks: ''
+      tasks: '',
+      state: ''
     }),
   methods: {
     newjob : function() {
-      fetch(new URL('job', Config.API).href, {
-        method: 'post',
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 'source_url': this.source_url,
-          'source_id': this.source_id, 
-          'tasks': JSON.parse(this.tasks)})
-      })
-      .then((resp) => {
-        if (!resp.ok) {
-          throw Error(resp.statusText, resp.status);
+      if (this.source_url.length > 0 && this.source_id.length > 0 
+        && this.tasks.length > 0) {
+        try {
+        fetch(new URL('job', Config.API).href, {
+          method: 'post',
+          headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 'source_url': this.source_url,
+            'source_id': this.source_id, 
+            'tasks': JSON.parse(this.tasks)})
+        })
+        .then((resp) => {
+          if (!resp.ok) {
+            throw Error(resp.statusText, resp.status);
+          }
+          return resp.json() 
+        })
+        .then(res => {
+          this.dialog = false; 
+          this.$emit('refresh')
+        }).catch(error => {
+          alert(error);
+        })
+        } catch(error) {
+          this.state = 'Error: ' + error.message;
+          console.error(error);
         }
-        return resp.json() 
-      })
-      .then(res => {
-        this.dialog = false; 
-        this.$emit('refresh')
-      }).catch(error => {
-        alert(error);
-      })
+      } else {
+        this.state = 'All fields are required, please enter a source url, id, and a list of tasks';
+      }
     }
   }
 })

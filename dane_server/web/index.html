@@ -28,14 +28,78 @@
 </div>
 
 <template id="dane-jobslist">
-    <v-container>
+    <div class="mx-8">
+      <v-card class="ma-2"
+          v-bind:loading="loading">
+        <v-card-title>Jobs overview
+        <v-spacer></v-spacer>
+          <v-btn
+            color="primary"
+            icon
+            @click.stop="infoDialog = true"
+          >
+        <v-icon>mdi-information</v-icon>
+          </v-btn>
+       <v-dialog style="justify-align: right"
+      v-model="infoDialog"
+      width="800"
+    >
+      <v-card>
+    <v-system-bar
+      color="primary"
+      dark
+    >
+      <v-spacer></v-spacer>
+      <v-icon @click="infoDialog = false">mdi-close</v-icon>
+    </v-system-bar>
+        <v-card-title>
+          About
+        </v-card-title>
+        <v-card-subtitle>
+          Job management tool for <a href="https://dane.readthedocs.io/en/latest/">DANE</a>
+        </v-card-subtitle>
+        <v-card-text>
+          By default this page will show all unfinished jobs, either because they are still in progress
+          or because they have stopped due to an error.<br/>
+          <br/>
+          With the search box you can look for jobs based on their job_id, you can look for multiple jobs by separating them with a comma.
+          Alternatively, instead of a single job id you can also enter a range, for example, <span style="background-color:#ddd;">1:12</span>
+          looks for jobs 1 through 12 (inclusive). Ranges can also used in a comma separated query.
+        </v-card-text>
+      <v-card-actions class="ma-0 pa-4">
+        API at &nbsp;<a :href="api" target="_blank">{{ api }}</a>
+        <v-spacer></v-spacer>
+        <a href="https://github.com/CLARIAH/DANE-server" target="_blank"><v-icon>mdi-github-circle</v-icon></a>
+      </v-card-actions>
+      </v-card>
+    </v-dialog> 
+        
+        
+        </v-card-title>
+        <v-card-text>
+          In progress: {{ allJobs.length }}
+        </v-card-text>
+    <v-card-actions>
+      <v-btn
+        text
+        v-on:click="refresh"
+        color="primary">
+        Refresh 
+      </v-btn>
+      <dane-newjob v-on:refresh="refresh"></dane-newjob>
+
+      <v-spacer></v-spacer>
+            <v-pagination style="justify-content: right;"
+              v-model="page"
+              :length="pages"
+              total-visible="10"
+            ></v-pagination>
+    </v-card-actions>
+      </v-card>
         <v-toolbar class="info pr-4">
-    <v-container>
+    <v-container class="mx-0" fluid>
       <v-row>
-          <v-col cols="2" class="pt-4">
-            <span class="title">Jobs overview</span>
-          </v-col>
-          <v-col cols="6">
+          <v-col cols="7">
         <v-text-field
           solo-inverted
           flat
@@ -43,9 +107,11 @@
           label="Search"
           prepend-inner-icon="search"
           v-model="searchList"
+          :append-icon="searchList.length > 0 ? 'close' : undefined"
+          @click:append="clear"
           ></v-text-field>
           </v-col>
-          <v-col cols="2">
+          <v-col cols="3">
         <v-select
           :items="bulkActions"
           label="Bulk action"
@@ -55,15 +121,10 @@
           v-if="filteredList.length > 0"
         ></v-select>
           </v-col>
-          <v-col cols="1" class="pt-4">
+          <v-col class="pt-4">
           <v-btn @click='doBulkAction'
                    v-if="filteredList.length > 0">
             Go</v-btn>
-          </v-col>
-          <v-col align="right">
-            <v-sheet max-width="50">
-      <dane-newjob v-on:refresh="refresh"></dane-newjob>
-            </v-sheet>
           </v-col>
       </v-row>
     </v-container>
@@ -87,17 +148,11 @@
           :idx="idx" v-bind:key="idx"></v-expansion-panel>
         </v-expansion-panels> 
         
-          <v-container>
-            <v-pagination
-              v-model="page"
-              :length="pages"
-              total-visible="10"
-            ></v-pagination>
-          </v-container>
+
         </v-container>
       </v-container>
 
-    </v-container>
+    </div>
 </template>
 
 <template id="dane-job-panel">
@@ -111,8 +166,8 @@
 </template>
 
 <template id="dane-job">
-      <v-sheet>
-        <v-sheet v-if="job.hasOwnProperty('job_id')">
+      <div>
+        <div v-if="job.hasOwnProperty('job_id')">
           <v-toolbar dense class="title secondary pr-4">
               Job #{{job.job_id }} details
           <v-spacer></v-spacer>
@@ -143,22 +198,23 @@
               </v-menu>
           </v-toolbar>
 
-          <v-simple-table>
-          <table>
-              <tr><td>Source id:</td><td>{{job.source_id}}</td></tr>
+            <div class="v-data-table theme--light">
+          <table style="table-layout:fixed;">
+              <tr><td width="15%">Source id:</td><td>{{job.source_id}}</td></tr>
               <tr><td>Source url:</td><td><a :href="job.source_url" target="_blank">{{job.source_url}}</a></td></tr>
               <tr><td>Priority:</td><td>{{job.priority}}</td></tr>
               <tr><td>Tasks:</td><td>
                   <v-card is="dane-taskcontainer" :tasks="job.tasks" v-on:refresh="refreshJob"></v-card>
               </td></tr>
               <tr><td>Metadata:</td><td>
-                      <pre>{{job.metadata}}</pre>
+                      <pre style="overflow: auto;">{{job.metadata}}</pre>
               </td></tr>
               <tr><td>Task responses:</td><td>
-                      <pre>{{job.response}}</pre>
+                      <pre style="overflow-x: auto;">{{job.response}}</pre>
               </td></tr>
           </table>
-          </v-simple-table>
+          </div>
+
           <v-container fluid>
           <v-expansion-panels dark popout flat active-class="hide-active-header"> 
               <v-expansion-panel>
@@ -169,7 +225,7 @@
               </v-expansion-panel>
           </v-expansion-panels>
           </v-container>
-      </v-sheet>
+      </div>
         <v-sheet v-else-if="errored">
           <v-alert type="error">Unable to load job.</v-alert>
         </v-sheet>
@@ -178,11 +234,11 @@
             <v-progress-circular indeterminate></v-progress-circular>
         </div>
         </v-sheet>
-      </v-sheet>
+      </div>
 </template>
 
 <template id="dane-taskcontainer">
-    <v-card>
+    <v-card style="max-width:100%">
     <v-card-title class="subtitle-2">{{ task }}</v-card-title>
     <v-card-text>
     <v-slide-group center-active show-arrows class="mb-3">
@@ -204,8 +260,8 @@
     </v-slide-group>
     <v-sheet v-if="task_details.hasOwnProperty('task_key')">
         <v-simple-table dense style="max-width: 60%;">
-        <table>
-            <tr><td>Key:</td><td>{{task_details.task_key}}</td></tr>
+          <table style="table-layout:fixed;">
+            <tr><td style="max-width:10%">Key:</td><td>{{task_details.task_key}}</td></tr>
             <tr><td>Id:</td><td>{{task_details.task_id}}</td></tr>
             <tr><td>State:</td><td>{{task_details.task_state}}</td></tr>
             <tr><td>Message:</td><td>{{task_details.task_msg}}</td></tr>
@@ -239,16 +295,16 @@
 </template>
 
 <template id="dane-newjob">
-  <v-sheet>
     <v-dialog v-model="dialog" max-width="600px">
       <template v-slot:activator="{ on }">
-      <v-btn icon v-on="on"><v-icon>mdi-plus-circle</v-icon></v-btn>
+      <v-btn text v-on="on" color="primary">Create a new job</v-btn>
       </template>
       <v-card>
         <v-card-title>
           <span class="headline">New job</span>
         </v-card-title>
         <v-card-text>
+          <div class="red--text subtitle-1" v-if="state.length > 0">{{ state }}</div>
           <v-container>
             <v-row>
               <v-col cols="12" sm="6">
@@ -263,8 +319,8 @@
                   name="input-7-4"
                   label="Task JSON*"
                   v-model="tasks"
-                  required
-                ></v-textarea>
+                  required>
+                </v-textarea>
               </v-col>
             </v-row>
           </v-container>
@@ -277,7 +333,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-   </v-sheet>
 </template>
 
 <template id="api-form">
