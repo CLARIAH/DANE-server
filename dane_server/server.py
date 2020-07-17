@@ -24,7 +24,7 @@ import os
 import sys
 import logging
 
-from dane_server.handlers.SQLHandler import SQLHandler
+from dane_server.handlers.ESHandler import ESHandler as Handler
 from dane_server.util.RabbitMQUtil import RabbitMQUtil
 import DANE
 from DANE.config import cfg
@@ -315,7 +315,7 @@ if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
 
 # should these be global vars?
 messageQueue = RabbitMQUtil(cfg)
-handler = SQLHandler(config=cfg, queue=messageQueue)
+handler = Handler(config=cfg, queue=messageQueue)
 messageQueue.run()
 
 def main():

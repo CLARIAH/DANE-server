@@ -123,7 +123,7 @@ class RabbitMQUtil():
         self.connection.add_callback_threadsafe(cb)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    def publish(self, routing_key, task_id, job):
+    def publish(self, routing_key, task, document):
         with self.internal_lock:
             try:
                 self.pub_channel.basic_publish(
@@ -131,16 +131,21 @@ class RabbitMQUtil():
                     routing_key=routing_key,
                     properties=pika.BasicProperties(
                         reply_to=self.config.RABBITMQ.RESPONSE_QUEUE,
-                        correlation_id=str(task_id),
-                        priority=int(job.priority),
+                        correlation_id=str(task._id),
+                        priority=int(task.priority),
                         delivery_mode=2
                     ),
                     mandatory=True,
-                    body=job.to_json())
+                    body=json.dumps({
+                        # flipflop between json and object is intentional
+                        # but maybe not most elegant way..
+                        'task': json.loads(task.to_json())['task'],
+                        'document': json.loads(document.to_json())
+                        }))
             except pika.exceptions.UnroutableError:
                 fail_resp = { 'state': 422, 
                         'message': 'Unroutable task' }
-                self.callback(task_id, fail_resp)
+                self.callback(task._id, fail_resp)
                 pass
             except Exception as e:
                 raise e
