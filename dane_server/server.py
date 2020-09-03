@@ -91,7 +91,7 @@ REGULAR ROUTING
 ------------------------------------------------------------------------------"""
 
 @bp.route('/document', methods=["POST"])
-def SubmitJob():
+def SubmitDocument():
     postData = None
 
     try:
@@ -122,7 +122,7 @@ def SubmitJob():
     return Response(doc.to_json(), status=201, mimetype='application/json')
 
 @bp.route('/document/<doc_id>', methods=["GET"])
-def GetJob(doc_id):
+def GetDocument(doc_id):
     try:
         doc_id = quote(doc_id) # escape potential nasties
         doc = handler.documentFromDocumentId(doc_id)
@@ -142,7 +142,7 @@ def GetJob(doc_id):
         return Response(doc.to_json(), status=200, mimetype='application/json')
 
 @bp.route('/document/<doc_id>/tasks', methods=["GET"])
-def GetJobTasks(doc_id):
+def GetDocumentTasks(doc_id):
     try:
         doc_id = quote(doc_id) # escape potential nasties
         doc = handler.documentFromDocumentId(doc_id)
@@ -163,7 +163,7 @@ def GetJobTasks(doc_id):
         return Response(json.dumps(tasks), status=200, mimetype='application/json')
 
 @bp.route('/document/<doc_id>/delete', methods=["GET"])
-def DeleteJob(doc_id):
+def DeleteDocument(doc_id):
     try:
         doc_id = quote(doc_id) # escape potential nasties
         doc = handler.documentFromDocumentId(doc_id)
