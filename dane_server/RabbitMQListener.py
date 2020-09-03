@@ -20,62 +20,25 @@ import threading
 from time import sleep
 import functools
 import logging
+from DANE.handlers import RabbitMQHandler 
 
 MAX_RETRY = 8
 RETRY_INTERVAL = 2 # seconds
 
-logger = logging.getLogger('DANE-server')
+logger = logging.getLogger('DANE')
 
-class RabbitMQUtil():
+class RabbitMQListener(RabbitMQHandler):
 
     internal_lock = threading.RLock()
 
     def __init__(self, config):
-        self.config = config	
-        self.callback = None
-        self.retry = 0
-        self.connect()
+        super().__init__(config)
 
     def connect(self):
         if not hasattr(self, 'connection') or \
             not self.connection or self.connection.is_closed:
-            credentials = pika.PlainCredentials(
-                    self.config.RABBITMQ.USER, 
-                    self.config.RABBITMQ.PASSWORD)
-
-            try:
-                self.connection = pika.BlockingConnection(
-                    pika.ConnectionParameters(
-                        credentials=credentials,
-                        host=self.config.RABBITMQ.HOST,
-                        port=self.config.RABBITMQ.PORT))
-            except (pika.exceptions.AMQPConnectionError, 
-                    pika.exceptions.ConnectionClosedByBroker) as e:
-                self.retry += 1
-                if self.retry <= MAX_RETRY:
-                    nap_time = RETRY_INTERVAL ** self.retry
-                    logger.warning('RabbitMQ Connection Failed. '\
-                            'RETRYING in {} seconds'.format(nap_time))
-                    sleep(nap_time)
-                    self.connect()
-                else:
-                    logger.critical(
-                            'RabbitMQ connection failed, no retries left')
-                    raise e from None
-            else:
-                self.retry = 0
-                self.channel = self.connection.channel()
-                self.pub_channel = self.connection.channel()
-
-                self.pub_channel.confirm_delivery()
-
-                self.channel.exchange_declare(
-                        exchange=self.config.RABBITMQ.EXCHANGE, 
-                        exchange_type='topic')
-
-                self.channel.queue_declare(
-                        queue=self.config.RABBITMQ.RESPONSE_QUEUE, 
-                        durable=True)
+            
+                super().connect()
 
                 self.channel.basic_consume(
                     queue=self.config.RABBITMQ.RESPONSE_QUEUE,
@@ -126,22 +89,7 @@ class RabbitMQUtil():
     def publish(self, routing_key, task, document):
         with self.internal_lock:
             try:
-                self.pub_channel.basic_publish(
-                    exchange=self.config.RABBITMQ.EXCHANGE,
-                    routing_key=routing_key,
-                    properties=pika.BasicProperties(
-                        reply_to=self.config.RABBITMQ.RESPONSE_QUEUE,
-                        correlation_id=str(task._id),
-                        priority=int(task.priority),
-                        delivery_mode=2
-                    ),
-                    mandatory=True,
-                    body=json.dumps({
-                        # flipflop between json and object is intentional
-                        # but maybe not most elegant way..
-                        'task': json.loads(task.to_json())['task'],
-                        'document': json.loads(document.to_json())
-                        }))
+                super().publish(routing_key, task, document)
             except pika.exceptions.UnroutableError:
                 fail_resp = { 'state': 422, 
                         'message': 'Unroutable task' }

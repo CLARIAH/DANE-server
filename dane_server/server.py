@@ -23,9 +23,10 @@ import json
 import os
 import sys
 import logging
+from urllib.parse import quote
 
-from dane_server.handlers.ESHandler import ESHandler as Handler
-from dane_server.util.RabbitMQUtil import RabbitMQUtil
+from dane_server.handler import Handler
+from dane_server.RabbitMQListener import RabbitMQListener
 import DANE
 from DANE.config import cfg
 
@@ -89,42 +90,42 @@ def requires_auth(f):
 REGULAR ROUTING 
 ------------------------------------------------------------------------------"""
 
-@bp.route('/job', methods=["POST"])
+@bp.route('/document', methods=["POST"])
 def SubmitJob():
     postData = None
 
     try:
-        postData = request.data
+        postData = request.data.decode('utf-8')
     except Exception as e:
         logger.exception('Error handling post data')
         abort(500) # TODO handle this nicer
 
     try:
-        job = DANE.Job.from_json(postData)
+        if '_id' in json.loads(postData):
+            raise TypeError
+        doc = DANE.Document.from_json(postData)
     except (TypeError, json.decoder.JSONDecodeError) as e:
         logger.exception('FormatError')
-        abort(400, 'Invalid job format')
+        abort(400, 'Invalid document format')
     except Exception as e:
         logger.exception('Unhandled Error')
         abort(500)
 
     try:
-        job.set_api(handler)
-        job.register()
-        job.run()
+        doc.set_api(handler)
+        doc.register()
 
-        job.refresh()
     except Exception as e:
         logger.exception('Unhandled Error')
         abort(500, str(e))
 
-    return Response(job.to_json(), status=201, mimetype='application/json')
+    return Response(doc.to_json(), status=201, mimetype='application/json')
 
-@bp.route('/job/<job_id>', methods=["GET"])
-def GetJob(job_id):
+@bp.route('/document/<doc_id>', methods=["GET"])
+def GetJob(doc_id):
     try:
-        job_id = int(job_id)
-        job = handler.jobFromJobId(job_id, get_state=True)
+        doc_id = quote(doc_id) # escape potential nasties
+        doc = handler.documentFromDocumentId(doc_id)
     except TypeError as e:
         logger.exception('TypeError')
         abort(500)
@@ -138,14 +139,14 @@ def GetJob(job_id):
         logger.exception('Unhandled Error')
         abort(500)
     else:
-        return Response(job.to_json(), status=200, mimetype='application/json')
+        return Response(doc.to_json(), status=200, mimetype='application/json')
 
-@bp.route('/job/<job_id>/retry', methods=["GET"])
-def RetryJob(job_id):
+@bp.route('/document/<doc_id>/tasks', methods=["GET"])
+def GetJobTasks(doc_id):
     try:
-        job_id = int(job_id)
-        job = handler.jobFromJobId(job_id, get_state=True)
-        job.retry().refresh()
+        doc_id = quote(doc_id) # escape potential nasties
+        doc = handler.documentFromDocumentId(doc_id)
+        tasks = doc.getAssignedTasks()
     except TypeError as e:
         logger.exception('TypeError')
         abort(500)
@@ -159,14 +160,14 @@ def RetryJob(job_id):
         logger.exception('Unhandled Error')
         abort(500)
     else:
-        return Response(job.to_json(), status=200, mimetype='application/json')
+        return Response(json.dumps(tasks), status=200, mimetype='application/json')
 
-@bp.route('/job/<job_id>/delete', methods=["GET"])
-def DeleteJob(job_id):
+@bp.route('/document/<doc_id>/delete', methods=["GET"])
+def DeleteJob(doc_id):
     try:
-        job_id = int(job_id)
-        job = handler.jobFromJobId(job_id, get_state=True)
-        job.delete()
+        doc_id = quote(doc_id) # escape potential nasties
+        doc = handler.documentFromDocumentId(doc_id)
+        doc.delete()
     except TypeError as e:
         logger.exception('TypeError')
         abort(500)
@@ -182,21 +183,89 @@ def DeleteJob(job_id):
     else:
         return ('', 200)
 
-@bp.route('/job/search/<source_id>', methods=["GET"])
-def search(source_id):
-    result = handler.search(source_id=source_id)
+@bp.route('/document/search/<target_id>/<creator_id>', methods=["GET"])
+def search(target_id, creator_id):
+    target_id = quote(target_id) # escape potential nasties
+    creator_id = quote(creator_id) 
+    result = handler.search(target_id, creator_id)
     return Response(json.dumps(result), status=200, mimetype='application/json')
 
-@bp.route('/job/inprogress', methods=["GET"])
-def inprogress():
-    result = handler.getUnfinished()
-    return Response(json.dumps(result), status=200, mimetype='application/json')
+@bp.route('/task', methods=["POST"])
+def SubmitTask():
+    postData = None
+
+    try:
+        postData = request.data.decode('utf-8')
+    except Exception as e:
+        logger.exception('Error handling post data')
+        abort(500) # TODO handle this nicer
+
+    try:
+        # extract 'document_id' key from postdata
+        postData = json.loads(postData)
+        docs = postData.pop('document_id')
+        if '_id' in postData:
+            raise TypeError
+
+        task = DANE.Task.from_json(postData)
+
+    except (TypeError, json.decoder.JSONDecodeError) as e:
+        logger.exception('FormatError')
+        abort(400, 'Invalid task format')
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+
+    try:
+        task.set_api(handler)
+
+        if isinstance(docs, list):
+            tasks = task.assignMany(docs)
+            resp = {}
+            resp['success'] = []
+            resp['failed'] = []
+            for d,t in tasks.items():
+                if isinstance(t, str):
+                    resp['failed'].append((d, t))
+                else:
+                    resp['success'].append((d, t._id))
+
+            return Response(json.dumps(resp), status=201, mimetype='application/json')
+        else:
+            task.assign(docs)    
+            return Response(task.to_json(), status=201, mimetype='application/json')
+
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500, str(e))
+
 
 @bp.route('/task/<task_id>', methods=["GET"])
 def GetTask(task_id):
     try:
-        task_id = int(task_id)
+        task_id = quote(task_id) 
         task = handler.taskFromTaskId(task_id)
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return Response(task.to_json(), status=200, mimetype='application/json')
+
+@bp.route('/task/<task_id>/retry', methods=["GET"])
+def RetryTask(task_id, force=False):
+    try:
+        task_id = quote(task_id) 
+        task = handler.taskFromTaskId(task_id)
+        task.retry(force=force).refresh()
     except TypeError as e:
         logger.exception('TypeError')
         abort(500)
@@ -213,30 +282,14 @@ def GetTask(task_id):
         return Response(task.to_json(), status=200, mimetype='application/json')
 
 @bp.route('/task/<task_id>/forceretry', methods=["GET"])
-def RetryTask(task_id):
-    try:
-        task_id = int(task_id)
-        task = handler.taskFromTaskId(task_id)
-        task.retry(force=True).refresh()
-    except TypeError as e:
-        logger.exception('TypeError')
-        abort(500)
-    except KeyError as e:
-        logger.exception('KeyError')
-        abort(404) 
-    except ValueError as e:
-        logger.exception('ValueError')
-        abort(400)
-    except Exception as e:
-        logger.exception('Unhandled Error')
-        abort(500)
-    else:
-        return Response(task.to_json(), status=200, mimetype='application/json')
+def ForceRetryTask(task_id):
+    task_id = quote(task_id) 
+    return RetryTask(task_id, True)
 
 @bp.route('/task/<task_id>/reset', methods=["GET"])
 def ResetTask(task_id):
     try:
-        task_id = int(task_id)
+        task_id = quote(task_id) 
         task = handler.taskFromTaskId(task_id)
         task.reset().refresh()
     except TypeError as e:
@@ -253,6 +306,11 @@ def ResetTask(task_id):
         abort(500)
     else:
         return Response(task.to_json(), status=200, mimetype='application/json')
+
+@bp.route('/task/inprogress', methods=["GET"])
+def inprogress():
+    result = handler.getUnfinished()
+    return Response(json.dumps(result), status=200, mimetype='application/json')
 
 """------------------------------------------------------------------------------
 DevOPs checks
@@ -314,12 +372,12 @@ if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
     os.makedirs(cfg.DANE_SERVER.OUT_FOLDER)
 
 # should these be global vars?
-messageQueue = RabbitMQUtil(cfg)
+messageQueue = RabbitMQListener(cfg)
 handler = Handler(config=cfg, queue=messageQueue)
 messageQueue.run()
 
 def main():
-    app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=False)
+    app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=True)
 
 if __name__ == '__main__':
     main()
