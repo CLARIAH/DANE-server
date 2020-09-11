@@ -1,5 +1,5 @@
 # DANE-server
-DANE-server is the back-end, component of [DANE](https://github.com/CLARIAH/DANE) and takes care of task routing as well as the (meta)data storage. A task submitted to 
+DANE-server is the back-end component of [DANE](https://github.com/CLARIAH/DANE) and takes care of task routing as well as the (meta)data storage. A task submitted to 
 DANE-server is registered in a database, and then its `.run()` function is called. Running a task involves assigning it to a worker via a message queue.
 
 A specific task is run by publishing the task to a [RabbitMQ Topic Exchange](https://www.rabbitmq.com/tutorials/tutorial-five-python.html),

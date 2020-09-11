@@ -241,6 +241,27 @@ def SubmitTask():
         logger.exception('Unhandled Error')
         abort(500, str(e))
 
+@bp.route('/task/<task_id>/delete', methods=["GET"])
+def DeleteTask(task_id):
+    try:
+        task_id = quote(task_id) 
+        task = handler.taskFromTaskId(task_id)
+        task.delete()
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return ('', 200)
+
 @bp.route('/task/<task_id>', methods=["GET"])
 def GetTask(task_id):
     try:
@@ -312,6 +333,47 @@ def ResetTask(task_id):
 def inprogress():
     result = handler.getUnfinished()
     return Response(json.dumps(result), status=200, mimetype='application/json')
+
+@bp.route('/result/<result_id>', methods=["GET"])
+def GetResult(result_id):
+    try:
+        result_id = quote(result_id) 
+        result = handler.resultFromResultId(result_id)
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return Response(result.to_json(), status=200, mimetype='application/json')
+
+@bp.route('/result/<result_id>/delete', methods=["GET"])
+def DeleteResult(result_id):
+    try:
+        result_id = quote(result_id) 
+        result = handler.resultFromResultId(result_id)
+        result.delete()
+    except TypeError as e:
+        logger.exception('TypeError')
+        abort(500)
+    except KeyError as e:
+        logger.exception('KeyError')
+        abort(404) 
+    except ValueError as e:
+        logger.exception('ValueError')
+        abort(400)
+    except Exception as e:
+        logger.exception('Unhandled Error')
+        abort(500)
+    else:
+        return ('', 200)
 
 """------------------------------------------------------------------------------
 DevOPs checks
