@@ -10,6 +10,121 @@ function debounce (fn, delay) {
   }
 }
 
+Vue.component('dane-document', {
+  template: '#dane-document',
+  props: ['doc_id'],
+  data: function() {
+    return {
+      doc: {},
+      errored: false,
+      attempts: 0,
+      dialog: false,
+      loading: true
+    }
+  }, 
+  created: function() {
+      this.load();
+    },
+  methods: {
+      load: function() {
+        fetch(new URL(`document/${this.doc_id}`, Config.API).href) 
+        .then((resp) => {
+          if (!resp.ok) {
+            this.errored = true;
+            this.loading = false;
+            throw Error(resp.statusText);
+          }
+          return resp.json() 
+        })
+        .then(data => {
+          this.doc = data;
+          this.loading = false;
+          })
+        .catch(error => {
+          // because network errors are type errors..
+          if (error.name == 'TypeError') {
+            this.loading = false;
+            this.errored = true;
+          }
+          throw error;
+        });
+      },
+      deleteDoc: function() {
+      vm.$refs.confirm.open('Delete document', 'Are you sure you want to delete this document?', 
+        { color: 'warning' }).then((confirm) => {
+          if (confirm) {
+            fetch(new URL(`document/${this.doc_id}/delete`, Config.API).href) 
+              .then((resp) => {
+                if (!resp.ok) {
+                  throw Error(resp.statusText, resp.status);
+                }
+                this.job = {};
+                this.$emit('deleteddoc')
+              })
+            .catch(error => {
+              if (error.fileName == 404) {
+                this.errored = true;
+                throw error
+              }
+              this.attempts++;
+              if (this.attempts < 5) {
+                setTimeout(this.load, (500 * Math.pow(2, this.attempts)));
+              } else {
+                this.errored = true;
+                throw error;
+              }
+            })
+          }
+        })
+    }
+   }
+})
+
+Vue.component('dane-doc-search', {
+  template: '#dane-doc-search',
+   data: function() {
+      return {
+        results: []
+      }
+    } 
+})
+
+Vue.component('dane-doc-searchbar', {
+  template: '#dane-doc-searchbar',
+  data: function() {
+      return {
+        target: "123456789999",
+        creator: "Tester",
+        docs: []
+      }
+    }, 
+  methods: {
+    search: function() {
+      fetch(new URL(`document/search/${this.target}/${this.creator}`, Config.API).href) 
+        .then((resp) => {
+          if (!resp.ok) {
+            this.docs = [];
+            this.$emit('input', this.docs);
+            throw Error(resp.statusText);
+          }
+          return resp.json() 
+        })
+        .then(data => {
+            this.docs = data['documents'];
+            this.$emit('input', this.docs);
+          })
+        .catch(error => {
+          // because network errors are type errors..
+          if (error.name == 'TypeError') {
+            this.docs = [];
+            this.$emit('input', this.docs);
+          }
+          throw error;
+        });
+     }
+  }
+})
+
 Vue.component('dane-jobslist', {
   template: '#dane-jobslist',
   data: function() {

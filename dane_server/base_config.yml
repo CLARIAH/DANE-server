@@ -1,8 +1,5 @@
 LOGGING: 
     DIR: "./dane-server-logs/"
     LEVEL: "DEBUG"
-DANE_SERVER:
-    TEMP_FOLDER: "/home/DANE/DANE-data/TEMP/"
-    OUT_FOLDER: "/home/DANE/DANE-data/OUT/"
 CONFIG:
     REQUIRED: True

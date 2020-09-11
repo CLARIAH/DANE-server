@@ -20,82 +20,120 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <v-content class="grey lighten-4">
-    <dane-jobslist></dane-jobslist>
-    </v-content>
+    <v-main class="grey lighten-4">
+
+    <dane-document doc_id="BQXr53MBMX-MC-V6BOe0"></dane-document>
+
+    <dane-doc-search></dane-doc-search>
+
+    </v-main>
     <confirm ref="confirm"></confirm>
 </v-app> 
 </div>
 
-<template id="dane-jobslist">
-    <div class="mx-8">
-      <v-card class="ma-2"
-          v-bind:loading="loading">
-        <v-card-title>Jobs overview
+<template id="dane-document">
+  <v-card
+    class="mx-auto my-2"
+    max-width="500"
+    outlined
+    :loading="loading"
+  > 
+  <div v-if="doc.hasOwnProperty('target')">
+    <v-card-title class="headline">{{ doc._id }}
         <v-spacer></v-spacer>
-          <v-btn
-            color="primary"
-            icon
-            @click.stop="infoDialog = true"
-          >
-        <v-icon>mdi-information</v-icon>
-          </v-btn>
-       <v-dialog style="justify-align: right"
-      v-model="infoDialog"
-      width="800"
+      <v-chip color="primary">{{ doc.target.type }}</v-chip>
+    </v-card-title>
+
+    <v-card-subtitle>
+    <a :href="doc.target.url" target="_blank">{{ doc.target.id }}</a>
+    </v-card-subtitle>
+
+    <v-card-text align="right">
+      by {{ doc.creator.id }} &nbsp; <v-chip color="secondary" small outlined>{{ doc.creator.type }}</v-chip>
+    </v-card-text>
+
+    <v-divider></v-divider>
+
+    <v-card-actions>
+      <v-spacer></v-spacer>
+      <v-btn text small @click.stop="dialog = true">view JSON</v-btn>
+      <v-btn text small @click="deleteDoc">Delete</v-btn>
+    </v-card-actions>
+
+    <v-dialog
+      v-model="dialog"
+      max-width="500"
     >
       <v-card>
-    <v-system-bar
-      color="primary"
-      dark
-    >
-      <v-spacer></v-spacer>
-      <v-icon @click="infoDialog = false">mdi-close</v-icon>
-    </v-system-bar>
-        <v-card-title>
-          About
-        </v-card-title>
-        <v-card-subtitle>
-          Job management tool for <a href="https://dane.readthedocs.io/en/latest/">DANE</a>
-        </v-card-subtitle>
-        <v-card-text>
-          By default this page will show all unfinished jobs, either because they are still in progress
-          or because they have stopped due to an error.<br/>
-          <br/>
-          With the search box you can look for jobs based on their job_id, you can look for multiple jobs by separating them with a comma.
-          Alternatively, instead of a single job id you can also enter a range, for example, <span style="background-color:#ddd;">1:12</span>
-          looks for jobs 1 through 12 (inclusive). Ranges can also used in a comma separated query.
-        </v-card-text>
-      <v-card-actions class="ma-0 pa-4">
-        API at &nbsp;<a :href="api" target="_blank">{{ api }}</a>
-        <v-spacer></v-spacer>
-        <a href="https://github.com/CLARIAH/DANE-server" target="_blank"><v-icon>mdi-github-circle</v-icon></a>
-      </v-card-actions>
-      </v-card>
-    </v-dialog> 
-        
-        
-        </v-card-title>
-        <v-card-text>
-          In progress: {{ allJobs.length }}
-        </v-card-text>
-    <v-card-actions>
-      <v-btn
-        text
-        v-on:click="refresh"
-        color="primary">
-        Refresh 
-      </v-btn>
-      <dane-newjob v-on:refresh="refresh"></dane-newjob>
+        <v-card-title class="headline">Document JSON</v-card-title>
 
-      <v-spacer></v-spacer>
-            <v-pagination style="justify-content: right;"
-              v-model="page"
-              :length="pages"
-              total-visible="10"
-            ></v-pagination>
-    </v-card-actions>
+        <v-card-text>
+          <pre>{{ JSON.stringify(doc, null, 2) }}</pre>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+
+          <v-btn
+            text
+            @click="dialog = false"
+          >
+            Close
+          </v-btn>
+        </v-card-actions>
       </v-card>
+    </v-dialog>
+   </div>
+   <div v-else-if="errored">
+          <v-alert type="error">Unable to load document.</v-alert>
+  </div>
+  <div v-else class="text-center">
+        Loading document..
+  </div>
+  </v-card>
+ </template>
+
+ <template id="dane-doc-search">
+   <v-sheet max-width="750" elevation="5">
+    <dane-doc-searchbar @input="results = arguments[0]"></dane-doc-searchbar>
+    <ul v-if="results.length > 0" style="list-style-type: none; padding: 5px;">
+    <template v-for="(d, i) in results">
+      <li :key="i">
+      <dane-document :doc_id="d"></dane-document>
+      </li>
+    </template>
+    <ul>
+   </v-sheet>
+ </template>
+
+ <template id="dane-doc-searchbar">
+<v-toolbar class="info" flat>
+      <v-text-field
+        solo-inverted
+        flat
+        hide-details
+        label="target id"
+        v-model="target"
+        prepend-inner-icon="search"
+        ></v-text-field>
+      <v-spacer></v-spacer>
+      <v-text-field
+        solo-inverted
+        flat
+        hide-details
+        label="creator id"
+        v-model="creator"
+        prepend-inner-icon="search"
+        ></v-text-field>
+        <v-spacer></v-spacer>
+        <v-btn @click.stop="search">
+          Search</v-btn>
+     </v-toolbar>
+ </template>
+
+<template id="dane-jobslist">
+    <div class="mx-8">
+
         <v-toolbar class="info pr-4">
     <v-container class="mx-0" fluid>
       <v-row>

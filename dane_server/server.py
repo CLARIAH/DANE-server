@@ -23,6 +23,7 @@ import json
 import os
 import sys
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import quote
 
 from dane_server.handler import Handler
@@ -36,19 +37,20 @@ app = Flask(__name__, static_url_path='/manage',
 
 app.debug = True
 
-logger = logging.getLogger('DANE-server')
-level = logging.getLevelName(cfg.LOGGING.LEVEL)
-logger.setLevel(level)
+logger = logging.getLogger('DANE')
+logger.setLevel(cfg.LOGGING.LEVEL)
 # create file handler which logs to file
 if not os.path.exists(os.path.realpath(cfg.LOGGING.DIR)):
     os.mkdir(os.path.realpath(cfg.LOGGING.DIR))
 
-fh = logging.FileHandler(os.path.join(
-    os.path.realpath(cfg.LOGGING.DIR), "DANE-server.log"))
-fh.setLevel(level)
+fh = TimedRotatingFileHandler(os.path.join(
+    os.path.realpath(cfg.LOGGING.DIR), "DANE-server.log"), 
+    when='W6', # start new log on sunday
+    backupCount=3)
+fh.setLevel(cfg.LOGGING.LEVEL)
 # create console handler 
 ch = logging.StreamHandler()
-ch.setLevel(level)
+ch.setLevel(cfg.LOGGING.LEVEL)
 # create formatter and add it to the handlers
 formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s',
@@ -239,7 +241,6 @@ def SubmitTask():
         logger.exception('Unhandled Error')
         abort(500, str(e))
 
-
 @bp.route('/task/<task_id>', methods=["GET"])
 def GetTask(task_id):
     try:
@@ -377,7 +378,7 @@ handler = Handler(config=cfg, queue=messageQueue)
 messageQueue.run()
 
 def main():
-    app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=True)
+    app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=False)
 
 if __name__ == '__main__':
     main()
