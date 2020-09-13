@@ -12,29 +12,81 @@
 
 <div id="app">
 <v-app> 
-<v-app-bar
-      app
-      clipped-left
-      color="primary">
-      <span class="title ml-3 mr-10">DANE<span class="font-weight-light">-web</span></span>
+  <v-app-bar flat app>
+      <v-toolbar-title>DANE</v-toolbar-title>
+
       <v-spacer></v-spacer>
+
+      <v-btn icon
+     v-on:click="$refs.apiform.dialog = true">
+        <v-icon>mdi-dots-vertical</v-icon>
+      </v-btn>
+
+      <template v-slot:extension>
+        <v-tabs
+          v-model="tab"
+          fixed-tabs
+        >
+          <v-tabs-slider></v-tabs-slider>
+          <v-tab
+            href="#overview"
+            class="primary--text"
+          >
+            Overview
+          </v-tab>
+        <v-tab v-show="false"
+            href="#document"
+            class="primary--text"
+          >
+            Document
+          </v-tab>
+            <v-tab v-show="false"
+            href="#worker"
+            class="primary--text"
+          >
+          Worker
+          </v-tab>
+          <v-tab
+            href="#workers"
+            class="primary--text"
+          >
+          Workers
+          </v-tab>
+        </v-tabs>
+      </template>
     </v-app-bar>
 
-    <v-main class="grey lighten-4">
+    <v-main>
+      <v-container>
+    <v-tabs-items v-model="tab">
+      <v-tab-item value="overview">
+        <dane-doc-search></dane-doc-search>
+      </v-tab-item>
 
-    <dane-document doc_id="BQXr53MBMX-MC-V6BOe0"></dane-document>
+      <v-tab-item value="document">
+        <dane-document :doc_id="doc"></dane-document>
+      </v-tab-item>
 
-    <dane-doc-search></dane-doc-search>
+      <v-tab-item value="workers"> 
+          <dane-workers></dane-workers>
+      </v-tab-item>
 
+      <v-tab-item value="worker"> 
+        <dane-worker-details :taskkey="worker"></dane-worker-details>
+      </v-tab-item>
+    </v-tabs-items>
+
+      </v-container>
     </v-main>
     <confirm ref="confirm"></confirm>
+    <api-form ref="apiform"></api-form>
 </v-app> 
 </div>
 
 <template id="dane-document">
+  <div>
   <v-card
     class="mx-auto my-2"
-    max-width="500"
     outlined
     :loading="loading"
   > 
@@ -45,7 +97,7 @@
     </v-card-title>
 
     <v-card-subtitle>
-    <a :href="doc.target.url" target="_blank">{{ doc.target.id }}</a>
+      {{ doc.target.id }} - <a :href="doc.target.url" target="_blank">{{ doc.target.url }}</a>
     </v-card-subtitle>
 
     <v-card-text align="right">
@@ -91,246 +143,129 @@
         Loading document..
   </div>
   </v-card>
+    <v-subheader v-if="tasks.length > 0">Tasks assigned to this document:</v-subheader>
+    <v-subheader v-else>No tasks assigned to this document.</v-subheader>
+    <dane-tasklist v-model="tasks" v-on:newval="newVal($event)"></dane-tasklist>
+    </div>
  </template>
 
  <template id="dane-doc-search">
-   <v-sheet max-width="750" elevation="5">
+   <v-sheet flat>
     <dane-doc-searchbar @input="results = arguments[0]"></dane-doc-searchbar>
-    <ul v-if="results.length > 0" style="list-style-type: none; padding: 5px;">
-    <template v-for="(d, i) in results">
-      <li :key="i">
-      <dane-document :doc_id="d"></dane-document>
-      </li>
-    </template>
-    <ul>
-   </v-sheet>
+ 
+    <v-data-table v-if="results.length > 0"
+    :headers="headers"
+    :items="results"
+    :items-per-page="10"
+    @click:row="clickRow"
+  ></v-data-table>
+     </v-sheet>
  </template>
 
  <template id="dane-doc-searchbar">
-<v-toolbar class="info" flat>
+   <v-form v-on:submit.prevent>
+    <v-container>
+      <v-row>
+        <v-col cols="5">
       <v-text-field
-        solo-inverted
         flat
         hide-details
         label="target id"
         v-model="target"
         prepend-inner-icon="search"
         ></v-text-field>
-      <v-spacer></v-spacer>
+        </v-col>
+
+        <v-col cols="5">
       <v-text-field
-        solo-inverted
         flat
         hide-details
         label="creator id"
         v-model="creator"
         prepend-inner-icon="search"
         ></v-text-field>
-        <v-spacer></v-spacer>
-        <v-btn @click.stop="search">
+        </v-col>
+
+        <v-col cols="2">
+        <v-btn @click.stop="search" text type="submit">
           Search</v-btn>
-     </v-toolbar>
+        </v-col>
+        </v-row>
+        <v-container>
+   </v-form>
  </template>
 
-<template id="dane-jobslist">
-    <div class="mx-8">
+ <template id="dane-tasklist">
+   <div>
+   <v-card v-for="task in value"
+    class="mx-auto my-2"
+    outlined
+    :key="task._id"
+  > 
+  <v-card-title class="headline">{{ task._id }}</v-card-title>
+  <v-card-subtitle>{{ task.key }}</v-card-subtitle>
 
-        <v-toolbar class="info pr-4">
-    <v-container class="mx-0" fluid>
-      <v-row>
-          <v-col cols="7">
-        <v-text-field
-          solo-inverted
-          flat
-          hide-details
-          label="Search"
-          prepend-inner-icon="search"
-          v-model="searchList"
-          :append-icon="searchList.length > 0 ? 'close' : undefined"
-          @click:append="clear"
-          ></v-text-field>
-          </v-col>
-          <v-col cols="3">
-        <v-select
-          :items="bulkActions"
-          label="Bulk action"
-          v-model="bulkAction"
-          solo
-          style="min-height: 0px; max-height: 32px;"
-          v-if="filteredList.length > 0"
-        ></v-select>
-          </v-col>
-          <v-col class="pt-4">
-          <v-btn @click='doBulkAction'
-                   v-if="filteredList.length > 0">
-            Go</v-btn>
-          </v-col>
-      </v-row>
-    </v-container>
-         </v-toolbar>
+  <v-card-text class="text--primary">
+    <v-chip :color="colour(task.state)"><strong>{{ task.state }}</strong></v-chip> {{ task.msg }}
+  </v-card-text>
+    <v-divider></v-divider>
+      <v-card-actions>
+        <v-spacer></v-spacer>
 
-      <v-container fluid class="grey lighten-5">
-        <v-container fluid v-if="loading">
-          <div class="text-center">
-          <v-progress-circular indeterminate size="64"></v-progress-circular>
-          </div>
-        </v-container>
-
-        <v-container fluid v-else-if="errored">
-          <api-form v-model="errored" v-on:updateapi="updateAPI"></api-form>
-        </v-container>
-
-        <v-container fluid v-else>
-        <v-expansion-panels multiple active-class="hide-active-header" v-model="panels"> 
-        <v-expansion-panel is="dane-job-panel" v-for="idx in jobsList" 
-          v-on:deletedjob="deleteJob"
-          :idx="idx" v-bind:key="idx"></v-expansion-panel>
-        </v-expansion-panels> 
-        
-
-        </v-container>
-      </v-container>
-
-    </div>
-</template>
-
-<template id="dane-job-panel">
-  <v-expansion-panel>
-        <v-expansion-panel-header class="subtitle-1">Job #{{idx}}</v-expansion-panel-header>
-
-        <v-expansion-panel-content>
-          <dane-job :idx="idx" v-on:deletedjob="$emit('deletedjob', idx);"></dane-job>
-        </v-expansion-panel-content>
-    </v-expansion-panel>
-</template>
-
-<template id="dane-job">
-      <div>
-        <div v-if="job.hasOwnProperty('job_id')">
-          <v-toolbar dense class="title secondary pr-4">
-              Job #{{job.job_id }} details
-          <v-spacer></v-spacer>
-
-          <v-tooltip bottom>
-          <template v-slot:activator="{ on }">
-          <v-btn @click='refreshJob' icon v-on="on"><v-icon>mdi-refresh</v-icon></v-btn>
-          </template>
-          <span>Refresh</span>
-          </v-tooltip>
-
-           <v-menu offset-y>
-                <template v-slot:activator="{ on }">
-                  <v-btn
-                    icon
-                    v-on="on">
-                    <v-icon>mdi-dots-vertical</v-icon>
-                  </v-btn>
-                </template>
-                <v-list dense>
-                  <v-list-item @click="retry">
-                    <v-list-item-title>Retry Job</v-list-item-title>
-                  </v-list-item>
-                  <v-list-item @click="deleteJob">
-                    <v-list-item-title>Delete Job</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
-          </v-toolbar>
-
-            <div class="v-data-table theme--light">
-          <table style="table-layout:fixed;">
-              <tr><td width="15%">Source id:</td><td>{{job.source_id}}</td></tr>
-              <tr><td>Source url:</td><td><a :href="job.source_url" target="_blank">{{job.source_url}}</a></td></tr>
-              <tr><td>Priority:</td><td>{{job.priority}}</td></tr>
-              <tr><td>Tasks:</td><td>
-                  <v-card is="dane-taskcontainer" :tasks="job.tasks" v-on:refresh="refreshJob"></v-card>
-              </td></tr>
-              <tr><td>Metadata:</td><td>
-                      <pre style="overflow: auto;">{{job.metadata}}</pre>
-              </td></tr>
-              <tr><td>Task responses:</td><td>
-                      <pre style="overflow-x: auto;">{{job.response}}</pre>
-              </td></tr>
-          </table>
-          </div>
-
-          <v-container fluid>
-          <v-expansion-panels dark popout flat active-class="hide-active-header"> 
-              <v-expansion-panel>
-                  <v-expansion-panel-header>View raw JSON</v-expansion-panel-header>
-                  <v-expansion-panel-content>
-                  <pre>{{ JSON.stringify(job, null, 2) }}</pre>
-                  </v-expansion-panel-content>
-              </v-expansion-panel>
-          </v-expansion-panels>
-          </v-container>
-      </div>
-        <v-sheet v-else-if="errored">
-          <v-alert type="error">Unable to load job.</v-alert>
-        </v-sheet>
-        <v-sheet v-else>
-        <div class="text-center">
-            <v-progress-circular indeterminate></v-progress-circular>
-        </div>
-        </v-sheet>
-      </div>
-</template>
-
-<template id="dane-taskcontainer">
-    <v-card style="max-width:100%">
-    <v-card-title class="subtitle-2">{{ task }}</v-card-title>
-    <v-card-text>
-    <v-slide-group center-active show-arrows class="mb-3">
-      <v-slide-item
-        v-if="task == 'Task'"
-        is="dane-task" :task="tasks" 
-        v-on:details="task_details = $event"
-      >
-      </v-slide-item>
-
-      <v-slide-item
-        v-else
-        v-for="t in tasks[task]"
-        :key="t.task_id"
-        is="dane-task" :task="t" 
-        v-on:details="task_details = $event"
-      >
-      </v-slide-item>
-    </v-slide-group>
-    <v-sheet v-if="task_details.hasOwnProperty('task_key')">
-        <v-simple-table dense style="max-width: 60%;">
-          <table style="table-layout:fixed;">
-            <tr><td style="max-width:10%">Key:</td><td>{{task_details.task_key}}</td></tr>
-            <tr><td>Id:</td><td>{{task_details.task_id}}</td></tr>
-            <tr><td>State:</td><td>{{task_details.task_state}}</td></tr>
-            <tr><td>Message:</td><td>{{task_details.task_msg}}</td></tr>
-            <tr><td colspan="2" class="pa-2">
-              <v-btn @click='resetState(task_details.task_id)' small color="info">Reset task state</v-btn>
-              <v-btn @click='forceRetry(task_details.task_id)' small color="warning">Force retry task</v-btn>
-            </td></tr>
-        </table>
-        </v-simple-table>
-    </v-sheet>
-    <v-sheet v-else-if="Object.keys(task_details).length == 1">
-        <v-card is="dane-taskcontainer" :tasks="task_details" v-on:refresh="$emit('refresh')"></v-card>
-    </v-sheet>
-    </v-card-text>
-    </v-card>
-</template>
-
-<template id="dane-task">
-      <v-slide-item
-        v-slot:default="{ active, toggle }">
-
-        <v-btn @click="toggle(); details()" 
-            active-class="primary white--text"
-            :input-value="active"
-            depressed
-            rounded>
-        {{ task_key }}
+        <v-btn
+          small text
+          @click="retryTask(task._id)"
+        >
+        Retry 
         </v-btn>
+          <v-btn
+          small text
+          @click="forceRetryTask(task._id)"
+        >
+        Force retry 
+        </v-btn>
+        <v-btn
+          small text
+          @click="resetTask(task._id)"
+        >
+        Reset 
+        </v-btn>
+            <v-btn
+          small text
+          @click="deleteTask(task._id)"
+        >
+        Delete 
+        </v-btn>
+      </v-card-actions>
+   </v-card>
+   </div>
+ </template>
 
-      </v-slide-item>
-</template>
+ <template id="dane-workers">
+   <v-sheet flat>
+ 
+    <v-data-table v-if="results.length > 0"
+    :headers="headers"
+    :items="results"
+    :items-per-page="15"
+    @click:row="clickRow"
+  ></v-data-table>
+     </v-sheet>
+ </template>
+
+ <template id="dane-worker-details">
+   <div>
+     <template v-if="tasks.length > 0">
+    <v-alert type="error">
+      {{ tasks.length }} errored tasks found for worker {{ taskkey }}!
+    </v-alert>
+    <dane-tasklist v-model="tasks" v-on:newval="newVal($event)"></dane-tasklist>
+     </template>
+      <v-alert type="success" v-else>
+        No error state tasks found for worker {{ taskkey }}.
+    </v-alert>
+   </div>
+ </template>
 
 <template id="dane-newjob">
     <v-dialog v-model="dialog" max-width="600px">
@@ -374,11 +309,10 @@
 </template>
 
 <template id="api-form">
-  <v-row justify="center">
-    <v-dialog persistent v-model="value" max-width="600px">
+    <v-dialog v-model="dialog" max-width="600px">
       <v-card>
         <v-card-title>
-          <span class="headline">Connection failed. Please specify API url.</span>
+          <span class="headline">Specify API url.</span>
         </v-card-title>
         <v-card-text>
           <v-container>
@@ -392,11 +326,10 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="$emit('updateapi', new_api);">Connect</v-btn>
+          <v-btn color="blue darken-1" text @click="update">Connect</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-row>
 </template>
 
 <template id="confirm">

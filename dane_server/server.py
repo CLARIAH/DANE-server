@@ -25,8 +25,9 @@ import sys
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import quote
+import requests
 
-from dane_server.handler import Handler
+from dane_server.handler import Handler, INDEX
 from dane_server.RabbitMQListener import RabbitMQListener
 import DANE
 from DANE.config import cfg
@@ -187,8 +188,8 @@ def DeleteDocument(doc_id):
 
 @bp.route('/document/search/<target_id>/<creator_id>', methods=["GET"])
 def search(target_id, creator_id):
-    target_id = quote(target_id) # escape potential nasties
-    creator_id = quote(creator_id) 
+    target_id = quote(target_id).replace('%2A', '*')
+    creator_id = quote(creator_id).replace('%2A', '*')
     result = handler.search(target_id, creator_id)
     return Response(json.dumps(result), status=200, mimetype='application/json')
 
@@ -375,6 +376,92 @@ def DeleteResult(result_id):
     else:
         return ('', 200)
 
+@bp.route('/workers', methods=["GET"])
+def getWorkers():
+    if not cfg.RABBITMQ.MANAGEMENT:
+        # no rabbitmq management plugin, so cant query workers
+        abort(405)
+    else:
+        virtual_host = ''
+
+        url = 'http://%s:%s/api/queues/%s' % (cfg.RABBITMQ.MANAGEMENT_HOST, 
+                cfg.RABBITMQ.MANAGEMENT_PORT, virtual_host)
+
+        response = requests.get(url, auth=(cfg.RABBITMQ.USER, 
+            cfg.RABBITMQ.PASSWORD))
+
+        workers = [{'name': q['name'], 
+            'active_workers': q['consumers'], 
+            'in_queue': q['messages']}
+            for q in response.json() 
+                if q['name'] != cfg.RABBITMQ.RESPONSE_QUEUE]
+
+        return Response(json.dumps(workers), status=200, mimetype='application/json')
+
+@bp.route('/workers/<task_key>', methods=["GET"])
+def getWorkerTasks(task_key):
+
+    # Get tasks which are assigned to this worker that errored
+    query = {
+         "_source": "task",
+          "query": {
+            "bool": {
+              "must": [
+                {
+                  "has_parent": {
+                    "parent_type": "document",
+                    "query": { 
+                      "exists": {
+                        "field": "target.id"
+                      }
+                    }
+                  }
+                },
+                {
+                  "match": {
+                    "task.key": task_key
+                  }
+                }
+              ],
+              "must_not": [
+                 {
+                  "match": {
+                    "task.state": 102
+                  }
+                }, {
+                  "match": {
+                    "task.state": 200
+                  }
+                }, {
+                  "match": {
+                    "task.state": 201
+                  }
+                }
+              ]
+            }
+          }
+        }
+
+    if task_key is not None:
+        query['query']['bool']['must'].append({
+              "match": {
+                "task.key": task_key
+              }
+            })
+    
+    result = handler.es.search(index=INDEX, body=query, size=20)
+    if result['hits']['total']['value'] > 0:
+        tasks = [{'_id': t['_id'], 
+            'key': t['_source']['task']['key'],
+            'state': t['_source']['task']['state'],
+            'msg': t['_source']['task']['msg']} for t \
+                in result['hits']['hits']]
+    else:
+        tasks = []
+
+    return Response(json.dumps(tasks), status=200, mimetype='application/json')
+
+
 """------------------------------------------------------------------------------
 DevOPs checks
 ------------------------------------------------------------------------------"""
@@ -440,7 +527,7 @@ handler = Handler(config=cfg, queue=messageQueue)
 messageQueue.run()
 
 def main():
-    app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=False)
+    app.run(port=cfg.DANE.PORT, host=cfg.DANE.HOST, use_reloader=True)
 
 if __name__ == '__main__':
     main()
