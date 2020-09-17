@@ -31,28 +31,30 @@ Vue.component('dane-document', {
   },
   methods: {
       load: function() {
-        fetch(new URL(`document/${this.doc_id}`, Config.API).href) 
-        .then((resp) => {
-          if (!resp.ok) {
-            this.errored = true;
-            this.loading = false;
-            throw Error(resp.statusText);
-          }
-          return resp.json() 
-        })
-        .then(data => {
-          this.doc = data;
-          this.loading = false;
-          this.loadTasks();
+        if (this.doc_id != null) { 
+          fetch(new URL(`document/${this.doc_id}`, Config.API).href) 
+          .then((resp) => {
+            if (!resp.ok) {
+              this.errored = true;
+              this.loading = false;
+              throw Error(resp.statusText);
+            }
+            return resp.json() 
           })
-        .catch(error => {
-          // because network errors are type errors..
-          if (error.name == 'TypeError') {
+          .then(data => {
+            this.doc = data;
             this.loading = false;
-            this.errored = true;
-          }
-          throw error;
-        });
+            this.loadTasks();
+            })
+          .catch(error => {
+            // because network errors are type errors..
+            if (error.name == 'TypeError') {
+              this.loading = false;
+              this.errored = true;
+            }
+            throw error;
+          });
+        }
       },
       loadTasks: function() {
         fetch(new URL(`document/${this.doc._id}/tasks`, Config.API).href) 
@@ -86,8 +88,9 @@ Vue.component('dane-document', {
                 if (!resp.ok) {
                   throw Error(resp.statusText, resp.status);
                 }
-                this.job = {};
-                this.$emit('deleteddoc')
+                this.doc = {};
+                this.tasks = [];
+                this.$emit('deleteddoc');
               })
             .catch(error => {
               if (error.fileName == 404) {
@@ -139,6 +142,9 @@ Vue.component('dane-doc-search', {
     methods: {
       clickRow: function(value) {
         vm.switchDoc(value._id);
+      },
+      search: function() {
+        this.$refs.searchbar.search();
       }
     }
 })
@@ -241,33 +247,48 @@ Vue.component('dane-tasklist', {
         } else {
           return 'red';
         }
+      },
+      goTask: function(key) {
+        vm.switchWorker(key);
       }
    }
 })
 
-Vue.component('dane-newjob', {
-  template: '#dane-newjob',
+Vue.component('dane-newdoc', {
+  template: '#dane-newdoc',
   data: () => ({
       dialog: false,
-      source_id: '',
-      source_url: '',
-      tasks: '',
+      types: ["Dataset", "Image", "Video", "Sound", "Text"],
+      agents: ["Organization", "Human", "Software"],
+      target_id: '',
+      target_url: '',
+      target_type: '',
+      creator_id: '',
+      creator_type: '',
       state: ''
     }),
   methods: {
     newjob : function() {
-      if (this.source_url.length > 0 && this.source_id.length > 0 
-        && this.tasks.length > 0) {
+      if (this.target_id.length > 0 && this.target_url.length > 0 
+        && this.creator_id.length > 0 && this.target_type.length > 0
+      && this.creator_type.length > 0) {
         try {
-        fetch(new URL('job', Config.API).href, {
+        fetch(new URL('document', Config.API).href, {
           method: 'post',
           headers: {
             'Accept': 'application/json, text/plain, */*',
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ 'source_url': this.source_url,
-            'source_id': this.source_id, 
-            'tasks': JSON.parse(this.tasks)})
+          body: JSON.stringify({ 'target': {
+              'id': this.target_id,
+              'url': this.target_url,
+              'type': this.target_type 
+            },
+            'creator': {
+                'id': this.creator_id,
+                'type': this.creator_type 
+            }
+          })
         })
         .then((resp) => {
           if (!resp.ok) {
@@ -277,7 +298,7 @@ Vue.component('dane-newjob', {
         })
         .then(res => {
           this.dialog = false; 
-          this.$emit('refresh')
+          this.$emit('refresh', res)
         }).catch(error => {
           alert(error);
         })
@@ -286,7 +307,7 @@ Vue.component('dane-newjob', {
           console.error(error);
         }
       } else {
-        this.state = 'All fields are required, please enter a source url, id, and a list of tasks';
+        this.state = 'Please specify all fields.';
       }
     }
   }
@@ -335,6 +356,55 @@ Vue.component('dane-workers', {
         });
       },
    }
+})
+
+Vue.component('dane-newtask', {
+  template: '#dane-newtask',
+  props: ['value'],
+  data: () => ({
+      dialog: false,
+      task_key: '',
+      priority: 1,
+      state: ''
+    }),
+  methods: {
+    assign: function() {
+      if (this.task_key.length > 0) {
+        try {
+        fetch(new URL('task', Config.API).href, {
+          method: 'post',
+          headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 'document_id': this.value,
+            'task': {
+                'key': this.task_key,
+                'priority': this.priority 
+            }
+          })
+        })
+        .then((resp) => {
+          if (!resp.ok) {
+            throw Error(resp.statusText, resp.status);
+          }
+          return resp.json() 
+        })
+        .then(res => {
+          this.dialog = false; 
+          this.$emit('newtask', res)
+        }).catch(error => {
+          alert(error);
+        })
+        } catch(error) {
+          this.state = 'Error: ' + error.message;
+          console.error(error);
+        }
+      } else {
+        this.state = 'Please specify all fields.';
+      }
+    }
+  }
 })
 
 Vue.component('dane-worker-details', {
@@ -475,6 +545,10 @@ var vm = new Vue({
     doc: null
   }),
   methods:  {
+    goOverview() {
+      this.doc = null;
+      this.tab = 'overview';
+    },
     switchDoc(id) {
       this.doc = id;
       this.tab = 'document';

@@ -60,11 +60,19 @@
       <v-container>
     <v-tabs-items v-model="tab">
       <v-tab-item value="overview">
-        <dane-doc-search></dane-doc-search>
+        <v-toolbar dense flat>
+          <v-toolbar-title class="overline">Document overview</v-toolbar-title>
+
+          <v-spacer></v-spacer>
+
+          <dane-newdoc v-on:refresh="$refs.docsearch.clickRow($event); $refs.docsearch.search();"></dane-newdoc>
+        </v-toolbar>
+        <v-divider></v-divider>
+        <dane-doc-search ref="docsearch"></dane-doc-search>
       </v-tab-item>
 
       <v-tab-item value="document">
-        <dane-document :doc_id="doc"></dane-document>
+        <dane-document :doc_id="doc" v-on:deleteddoc="goOverview(); $refs.docsearch.search();"></dane-document>
       </v-tab-item>
 
       <v-tab-item value="workers"> 
@@ -108,6 +116,7 @@
 
     <v-card-actions>
       <v-spacer></v-spacer>
+      <dane-newtask v-model="doc._id" v-on:newtask="loadTasks()"></dane-newtask>
       <v-btn text small @click.stop="dialog = true">view JSON</v-btn>
       <v-btn text small @click="deleteDoc">Delete</v-btn>
     </v-card-actions>
@@ -144,19 +153,20 @@
   </div>
   </v-card>
     <v-subheader v-if="tasks.length > 0">Tasks assigned to this document:</v-subheader>
-    <v-subheader v-else>No tasks assigned to this document.</v-subheader>
+    <v-subheader v-else-if="!errored">No tasks assigned to this document.</v-subheader>
     <dane-tasklist v-model="tasks" v-on:newval="newVal($event)"></dane-tasklist>
     </div>
  </template>
 
  <template id="dane-doc-search">
    <v-sheet flat>
-    <dane-doc-searchbar @input="results = arguments[0]"></dane-doc-searchbar>
+    <dane-doc-searchbar @input="results = arguments[0]" ref="searchbar"></dane-doc-searchbar>
  
     <v-data-table v-if="results.length > 0"
     :headers="headers"
     :items="results"
     :items-per-page="10"
+    :sort-by="['creator.id']"
     @click:row="clickRow"
   ></v-data-table>
      </v-sheet>
@@ -203,7 +213,7 @@
     :key="task._id"
   > 
   <v-card-title class="headline">{{ task._id }}</v-card-title>
-  <v-card-subtitle>{{ task.key }}</v-card-subtitle>
+     <v-card-subtitle><v-btn small text @click="goTask(task.key)">{{ task.key }}</v-card-subtitle>
 
   <v-card-text class="text--primary">
     <v-chip :color="colour(task.state)"><strong>{{ task.state }}</strong></v-chip> {{ task.msg }}
@@ -267,42 +277,79 @@
    </div>
  </template>
 
-<template id="dane-newjob">
+<template id="dane-newdoc">
     <v-dialog v-model="dialog" max-width="600px">
       <template v-slot:activator="{ on }">
-      <v-btn text v-on="on" color="primary">Create a new job</v-btn>
+      <v-btn text v-on="on" color="primary" icon>
+        <v-icon>mdi-file-document-box-plus</v-icon>
+      </v-btn>
       </template>
       <v-card>
         <v-card-title>
-          <span class="headline">New job</span>
+          <span class="headline">New document</span>
         </v-card-title>
         <v-card-text>
           <div class="red--text subtitle-1" v-if="state.length > 0">{{ state }}</div>
           <v-container>
             <v-row>
-              <v-col cols="12" sm="6">
-                <v-text-field label="Source id*" required v-model="source_id"></v-text-field>
+              <v-col cols="6">
+                <v-text-field label="Target id" required v-model="target_id"></v-text-field>
+              </v-col>
+              <v-col cols="6">
+                <v-select
+                :items="types"
+                label="Target type"
+                v-model="target_type"
+                ></v-select>
               </v-col>
               <v-col cols="12">
-                <v-text-field label="Source url*" required v-model="source_url"></v-text-field>
+                <v-text-field label="Target url" required v-model="target_url"></v-text-field>
               </v-col>
-              <v-col cols="12">
-                <v-textarea
-                  filled
-                  name="input-7-4"
-                  label="Task JSON*"
-                  v-model="tasks"
-                  required>
-                </v-textarea>
+            </v-row>
+
+            <v-row>
+              <v-col cols="6">
+                <v-text-field label="Creator id" required v-model="creator_id"></v-text-field>
+              </v-col>
+              <v-col cols="6">
+                <v-select
+                :items="agents"
+                  label="Creator type"
+                v-model="creator_type"
+                ></v-select>
               </v-col>
             </v-row>
           </v-container>
-          <small>*indicates required field</small>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="blue darken-1" text @click="dialog = false">Close</v-btn>
           <v-btn color="blue darken-1" text @click="newjob()">Submit</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+</template>
+
+<template id="dane-newtask">
+    <v-dialog v-model="dialog" max-width="600px">
+      <template v-slot:activator="{ on }">
+      <v-btn text v-on="on" color="primary" icon>
+        <v-icon>mdi-note-plus</v-icon>
+      </v-btn>
+      </template>
+      <v-card>
+        <v-card-title>
+          <span class="headline">Assign new task to {{ value }}</span>
+        </v-card-title>
+        <v-card-text>
+          <div class="red--text subtitle-1" v-if="state.length > 0">{{ state }}</div>
+            <v-text-field label="Task key" required v-model="task_key"></v-text-field>
+
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="dialog = false">Close</v-btn>
+          <v-btn color="blue darken-1" text @click="assign()">Submit</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
