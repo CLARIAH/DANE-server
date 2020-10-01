@@ -16,6 +16,7 @@
 from flask import Flask
 from flask import render_template, redirect, url_for, Blueprint, abort, send_from_directory
 from flask import request, Response, make_response
+from flask.views import View
 
 from functools import wraps
 
@@ -33,6 +34,7 @@ import DANE
 from DANE.config import cfg
 
 bp = Blueprint('DANE', __name__)
+
 app = Flask(__name__, static_url_path='/manage', 
         static_folder="web")
 
@@ -185,6 +187,36 @@ def DeleteDocument(doc_id):
         abort(500)
     else:
         return ('', 200)
+
+@bp.route('/document/batchdelete', methods=["POST"])
+def BatchDelete():
+    postData = None
+
+    try:
+        postData = request.data.decode('utf-8')
+    except Exception as e:
+        logger.exception('Error handling post data')
+        abort(500)
+
+    for doc_id in postData:
+        try:
+            doc_id = quote(doc_id) # escape potential nasties
+            doc = handler.documentFromDocumentId(doc_id)
+            doc.delete()
+        except TypeError as e:
+            logger.exception('TypeError')
+            abort(500, "{ 'document': {})".format(doc_id))
+        except KeyError as e:
+            # for batch its OK if the doc_id doesnt exist
+            pass
+        except ValueError as e:
+            logger.exception('ValueError')
+            abort(400, "{ 'document': {})".format(doc_id))
+        except Exception as e:
+            logger.exception('Unhandled Error')
+            abort(500, "{ 'document': {})".format(doc_id))
+
+    return ('', 200)
 
 @bp.route('/document/search/<target_id>/<creator_id>', methods=["GET"])
 def search(target_id, creator_id):
@@ -466,25 +498,21 @@ def getWorkerTasks(task_key):
 DevOPs checks
 ------------------------------------------------------------------------------"""
 
-@bp.route('/health', methods=["GET"])
+@app.route('/health', methods=["GET"])
 def HealthCheck():
     return ('', 200)
 
-@bp.route('/ready', methods=["GET"])
+@app.route('/ready', methods=["GET"])
 def ReadyCheck():
     states = {}
 
     try:
-        conn = handler._get_connection()
-    except DANE.errors.ResourceConnectionError as e:
-        logging.exception('ReadyCheck ResourceConnectionError')
-        states['database'] = False
+        handler.es.ping()
     except Exception as e:
-        logging.exception('Unhandled readyCheck error')
-        raise e
+        logging.exception('ReadyCheck Exception')
+        states['database'] = False
     else:
-        states['database'] = conn.is_connected()
-        conn.close()
+        states['database'] = True
 
     states['messagequeue'] = messageQueue.connection.is_open
 
