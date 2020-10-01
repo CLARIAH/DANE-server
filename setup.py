@@ -36,7 +36,7 @@ setup(name='dane-server',
     install_requires=[
       'DANE',
       'Flask',
-      'elasticsearch'
+      'elasticsearch',
       'pika',
       'gunicorn==19.8.0'
     ])
