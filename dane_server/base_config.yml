@@ -1,5 +1,3 @@
 LOGGING: 
     DIR: "./dane-server-logs/"
     LEVEL: "DEBUG"
-CONFIG:
-    REQUIRED: True

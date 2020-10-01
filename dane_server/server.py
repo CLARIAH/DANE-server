@@ -516,11 +516,6 @@ def manager():
 
 app.register_blueprint(bp, url_prefix='/DANE')
 
-if not os.path.exists(cfg.DANE_SERVER.TEMP_FOLDER):
-    os.makedirs(cfg.DANE_SERVER.TEMP_FOLDER)
-if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
-    os.makedirs(cfg.DANE_SERVER.OUT_FOLDER)
-
 # should these be global vars?
 messageQueue = RabbitMQListener(cfg)
 handler = Handler(config=cfg, queue=messageQueue)
