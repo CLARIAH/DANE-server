@@ -1,9 +1,6 @@
 LOGGING: 
     DIR: "/tmp/LOGS/"
     LEVEL: "DEBUG"
-DANE_SERVER:
-    TEMP_FOLDER: "/tmp/DANE/TEMP/"
-    OUT_FOLDER: "/tmp/DANE/OUT/"
 RABBITMQ:
     EXCHANGE: 'DANE-TEST-exchange'
     RESPONSE_QUEUE: 'DANE-TEST-response-queue'

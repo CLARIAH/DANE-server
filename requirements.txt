@@ -1,5 +1,5 @@
 DANE
 Flask
-mysql-connector-python
+elasticsearch
 pika
 gunicorn==19.8.0

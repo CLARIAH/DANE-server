@@ -13,10 +13,6 @@ from dane_server.RabbitMQListener import RabbitMQListener
 class TestBackend(unittest.TestCase):
 
     def test_backend(self):
-        if not os.path.exists(cfg.DANE_SERVER.TEMP_FOLDER):
-            os.makedirs(cfg.DANE_SERVER.TEMP_FOLDER)
-        if not os.path.exists(cfg.DANE_SERVER.OUT_FOLDER):
-            os.makedirs(cfg.DANE_SERVER.OUT_FOLDER)
 
         self.messageQueue = RabbitMQListener(cfg)
         handler = Handler(config=cfg, queue=self.messageQueue)
@@ -74,10 +70,12 @@ class TestBackend(unittest.TestCase):
         if 'TEST' in cfg.RABBITMQ.RESPONSE_QUEUE:
             self.messageQueue.channel.queue_delete(cfg.RABBITMQ.RESPONSE_QUEUE)
 
-        # delete the worker queue
-        self.worker.channel.queue_delete(queue=self.worker.queue)
+        if hasattr(self, 'worker'):
+            # delete the worker queue
+            self.worker.channel.queue_delete(queue=self.worker.queue)
 
-        self.messageQueue.stop()
+        if hasattr(self, 'messageQueue'):
+            self.messageQueue.stop()
 
 if __name__ == '__main__':
     unittest.main()
