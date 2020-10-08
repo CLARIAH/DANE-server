@@ -53,9 +53,9 @@ class TestBackend(unittest.TestCase):
                 break
 
         self.assertTrue(task.isDone())
+        self.assertTrue(task.delete())
 
         self.assertTrue(doc.delete())
-        self.assertTrue(task.delete())
 
         self.worker.stop()
         # Wait for the worker to stop
