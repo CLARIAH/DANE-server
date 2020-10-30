@@ -40,8 +40,8 @@ class Handler(DANE.handlers.ESHandler):
             th.start()
 
     def _resume_unfinished(self):
-        unfinished = self.getUnfinished()['tasks']
+        unfinished = self.getUnfinished()
         if len(unfinished) > 0:
             logger.info("Attempting to resume unfinished tasks")
-            for tid in unfinished:
-                self.taskFromTaskId(tid).retry()
+            for task in unfinished:
+                self.taskFromTaskId(task['_id']).retry()

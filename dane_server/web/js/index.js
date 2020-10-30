@@ -83,7 +83,9 @@ Vue.component('dane-document', {
       vm.$refs.confirm.open('Delete document', 'Are you sure you want to delete this document?', 
         { color: 'warning' }).then((confirm) => {
           if (confirm) {
-            fetch(new URL(`document/${this.doc_id}/delete`, Config.API).href) 
+            fetch(new URL(`document/${this.doc_id}`, Config.API).href, {
+              'method': 'DELETE' 
+            }) 
               .then((resp) => {
                 if (!resp.ok) {
                   throw Error(resp.statusText, resp.status);
@@ -165,7 +167,7 @@ Vue.component('dane-doc-searchbar', {
     search: function() {
       let t = ((this.target.length > 0) ? this.target : '*');
       let c = ((this.creator.length > 0) ? this.creator : '*');
-      fetch(new URL(`document/search/${t}/${c}`, Config.API).href) 
+      fetch(new URL(`search/document?target_id=${t}&creator_id=${c}`, Config.API).href) 
         .then((resp) => {
           if (!resp.ok) {
             this.docs = [];
@@ -212,7 +214,19 @@ Vue.component('dane-tasklist', {
         vm.$refs.confirm.open('Delete task', 'Are you sure you want to delete this task?', 
         { color: 'warning' }).then((confirm) => {
           if (confirm) {
-            this.doAction(id, 'delete');
+            fetch(new URL(`task/${id}`, Config.API).href, {
+              method: 'DELETE' 
+            }) 
+            .then((resp) => {
+              if (!resp.ok) {
+                throw Error(resp.statusText, resp.status);
+              }
+              // create artificial object to show deletion
+                this.$emit('newval', {'_id': id, 
+                  'state': "000",
+                  'key': "DELETED",
+                  'msg': "Task deleted"});
+            })
           }
         })
       },
@@ -225,18 +239,7 @@ Vue.component('dane-tasklist', {
           return resp.json() 
         })
         .then(data => {
-          this.$emit('newval', data.task);
-        })
-        .catch(error => {
-          if (action == 'delete') {
-            // create artificial object to show deletion
-            this.$emit('newval', {'_id': id, 
-              'state': "000",
-              'key': "DELETED",
-              'msg': "Task deleted"});
-          } else {
-            throw error;
-          }
+          this.$emit('newval', data);
         })
       },
       colour: function(s) {
@@ -273,7 +276,7 @@ Vue.component('dane-newdoc', {
         && this.creator_id.length > 0 && this.target_type.length > 0
       && this.creator_type.length > 0) {
         try {
-        fetch(new URL('document', Config.API).href, {
+        fetch(new URL('document/', Config.API).href, {
           method: 'post',
           headers: {
             'Accept': 'application/json, text/plain, */*',
@@ -371,7 +374,7 @@ Vue.component('dane-newtask', {
     assign: function() {
       if (this.task_key.length > 0) {
         try {
-        fetch(new URL('task', Config.API).href, {
+        fetch(new URL('task/', Config.API).href, {
           method: 'post',
           headers: {
             'Accept': 'application/json, text/plain, */*',
