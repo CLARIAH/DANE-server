@@ -16,7 +16,9 @@ class TestBackend(unittest.TestCase):
 
         self.messageQueue = RabbitMQListener(cfg)
         handler = Handler(config=cfg, queue=self.messageQueue)
-        self.messageQueue.run()
+        s_thread = threading.Thread(target=self.messageQueue.run)
+        s_thread.setDaemon(True)
+        s_thread.start()
 
         self.worker = test_worker(cfg)
 

@@ -22,9 +22,6 @@ import functools
 import logging
 from DANE.handlers import RabbitMQHandler 
 
-MAX_RETRY = 8
-RETRY_INTERVAL = 2 # seconds
-
 logger = logging.getLogger('DANE')
 
 class RabbitMQListener(RabbitMQHandler):
@@ -61,9 +58,8 @@ class RabbitMQListener(RabbitMQHandler):
             sleep(0.1)
 
     def run(self):
-        self.thread = threading.Thread(target=self._process_data_events)
-        self.thread.setDaemon(True)
-        self.thread.start()
+        logger.debug("Starting blocking queue listener")
+        self._process_data_events()
 
     def stop(self):
         self.channel.stop_consuming()

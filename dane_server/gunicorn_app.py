@@ -1,4 +1,4 @@
-from dane_server.server import app, cfg
+from dane_server.api import app, cfg
 import gunicorn.app.base
 from gunicorn.six import iteritems
 

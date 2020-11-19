@@ -35,59 +35,20 @@ DANE_SERVER:
 
 *NOTE: DANE-server is still in development, as such authorisation (amongst other featueres) has not yet been added. Use at your own peril.*
 
-Run the DANE-server server as follows (this starts a Gunicorn HTTP server):
+Run the server component (which listens to the RabbitMQ) as follows:
 
     dane-server
 
-If no errors occur then this should start a Flask server (at port 5500) which will handle API requests, and in the background the server will handle interaction with the DB and RabbitMQ.
+Besides the server component we also need the API, which we can start with:
+
+    dane-api
+
+If no errors occur then this should start a webserver (at port 5500) which will handle API requests, 
+while in the background the server will handle interaction with the DB and RabbitMQ.
 
 ## API
 
-DANE-server can be interacted with via a small API that supports a small number of essential calls:
-
-    /DANE/document/
-
-Via POST a new document can be submitted. It expects a JSON object which is a serialised document specification.
-
-    /DANE/document/<doc_id>
-
-Get information about an existing document.
-
-    /DANE/document/<doc_id>/tasks
-
-Get information about the tasks assigned to this document
-
-    /DANE/document/<doc_id>/delete
-
-Deletes the document
- 
-    /DANE/search/<target_id>/<creator_id>
-
-Return the _id's for all documents that have this target_id and creator_id
-
-    /DANE/task/
-
-Via POST a new task can be submitted. It expects a JSON object which is a serialised task specification.
-
-    /DANE/task/<task_id>
-
-Get information about this task
-
-    /DANE/task/<task_id>/retry
-
-This will cause the DANE-server to retry this task.
-
-    /DANE/task/<task_id>/forceretry
-
-This will force the DANE-server to retry this task, even if it completed successfully or is already queued.
-
-    /DANE/task/<task_id>/reset
-
-Reset the task state to `201`
-
-    /DANE/task/inprogress
-
-Returns a list of _id's for in progress tasks, or tasks which have errored.
+The DANE api is documented with a swagger UI, available at: http://localhost:5500/DANE/
 
 ## Examples
 
