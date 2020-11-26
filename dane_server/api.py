@@ -36,15 +36,6 @@ from DANE.config import cfg
 
 logger = logging.getLogger('DANE')
 logger.setLevel(cfg.LOGGING.LEVEL)
-# create file handler which logs to file
-if not os.path.exists(os.path.realpath(cfg.LOGGING.DIR)):
-    os.mkdir(os.path.realpath(cfg.LOGGING.DIR))
-
-fh = TimedRotatingFileHandler(os.path.join(
-    os.path.realpath(cfg.LOGGING.DIR), "DANE-api.log"), 
-    when='W6', # start new log on sunday
-    backupCount=3)
-fh.setLevel(cfg.LOGGING.LEVEL)
 # create console handler 
 ch = logging.StreamHandler()
 ch.setLevel(cfg.LOGGING.LEVEL)
@@ -52,10 +43,8 @@ ch.setLevel(cfg.LOGGING.LEVEL)
 formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s',
         "%Y-%m-%d %H:%M:%S")
-fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
-logger.addHandler(fh)
 logger.addHandler(ch)
 
 bp = Blueprint('DANE', __name__)
@@ -178,6 +167,12 @@ _batchResultTasks = api.model('BatchResultTasks', {
         required=False)
 })
 
+_searchResult = api.model('SearchResult', {
+    'total' : fields.Integer(description='Total hits', required=True, example=1),
+    'hits' : fields.List(fields.Nested(_document), description='Documents returned', 
+        required=True)
+})
+
 @ns_doc.route('/')
 class DocumentListAPI(Resource):
     
@@ -204,7 +199,8 @@ class DocumentListAPI(Resource):
         try:
             doc.set_api(get_handler())
             doc.register()
-
+        except DANE.errors.DocumentExistsError as e:
+            abort(409, str(e))
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500, str(e))
@@ -292,13 +288,12 @@ class BatchDocumentsListAPI(Resource):
             logger.exception('Error handling post data')
             abort(500) # TODO handle this nicer
 
-        success = []
-        failed = []
+        docs = []
         for pd in postData:
             try:
                 if '_id' in pd:
                     raise TypeError
-                doc = DANE.Document.from_json(pd)
+                docs.append(DANE.Document.from_json(pd))
             except (TypeError, json.decoder.JSONDecodeError) as e:
                 logger.exception('FormatError')
                 failed.append({'invalid': pd, 'error': 'Invalid document format'})
@@ -308,14 +303,7 @@ class BatchDocumentsListAPI(Resource):
                 failed.append({'invalid': pd, 'error': 'Unhandled error'})
                 continue
 
-            try:
-                doc.set_api(get_handler())
-                doc.register()
-                success.append(doc)
-
-            except Exception as e:
-                logger.exception('Unhandled Error')
-                failed.append({'document': doc, 'error': str(e)})
+        success, failed = get_handler().registerDocuments(docs)
 
         return {'success': success, 'failed': failed }
 
@@ -392,18 +380,21 @@ class SearchAPI(Resource):
     @ns_search.doc(params={'target_id' : { 'description': "ID of document", 
             'type': 'string', 'default': '*', 'required': False },
         'creator_id' : { 'description': "ID of document creator/owner", 
-            'type': 'string' , 'default': '*', 'required': False}})
-    @ns_doc.marshal_with(_document, as_list=True)
+            'type': 'string' , 'default': '*', 'required': False},
+        'page' : { 'description': "page number", 
+            'type': 'int' , 'default': '1', 'required': False}})
+    @ns_doc.marshal_with(_searchResult, as_list=True)
     def get(self):
         target_id = quote(request.args.get('target_id', '*')).replace('%2A', '*')
         creator_id = quote(request.args.get('creator_id', '*')).replace('%2A', '*')
-        result = get_handler().search(target_id, creator_id)
-        return result
+        result, count = get_handler().search(target_id, creator_id, 
+                int(request.args.get('page', 1)))
+        return { 'total': count, 'hits' : result }
 
 @ns_task.route('/')
 class TaskListAPI(Resource):
 
-    @ns_docs.expect([_task])
+    @ns_docs.expect(_task)
     def post(self):
         postData = None
 

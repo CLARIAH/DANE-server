@@ -1,3 +1,0 @@
-LOGGING: 
-    DIR: "./dane-server-logs/"
-    LEVEL: "DEBUG"

@@ -177,7 +177,7 @@ Vue.component('dane-doc-searchbar', {
           return resp.json() 
         })
         .then(data => {
-            this.docs = data;
+            this.docs = data['hits'];
             this.$emit('input', this.docs);
           })
         .catch(error => {
