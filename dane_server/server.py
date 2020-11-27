@@ -31,6 +31,15 @@ from DANE.config import cfg
 def main():
     logger = logging.getLogger('DANE')
     logger.setLevel(cfg.LOGGING.LEVEL)
+    # create file handler which logs to file
+    if not os.path.exists(os.path.realpath(cfg.LOGGING.DIR)):
+        os.makedirs(os.path.realpath(cfg.LOGGING.DIR), exist_ok=True)
+
+    fh = TimedRotatingFileHandler(os.path.join(
+        os.path.realpath(cfg.LOGGING.DIR), "DANE-server.log"), 
+        when='W6', # start new log on sunday
+        backupCount=3)
+    fh.setLevel(cfg.LOGGING.LEVEL)
     # create console handler 
     ch = logging.StreamHandler()
     ch.setLevel(cfg.LOGGING.LEVEL)
@@ -38,8 +47,10 @@ def main():
     formatter = logging.Formatter(
             '%(asctime)s - %(levelname)s - %(message)s',
             "%Y-%m-%d %H:%M:%S")
+    fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     # add the handlers to the logger
+    logger.addHandler(fh)
     logger.addHandler(ch)
 
     messageQueue = RabbitMQListener(cfg)

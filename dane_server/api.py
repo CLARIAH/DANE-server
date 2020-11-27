@@ -36,6 +36,15 @@ from DANE.config import cfg
 
 logger = logging.getLogger('DANE')
 logger.setLevel(cfg.LOGGING.LEVEL)
+# create file handler which logs to file
+if not os.path.exists(os.path.realpath(cfg.LOGGING.DIR)):
+    os.makedirs(os.path.realpath(cfg.LOGGING.DIR), exist_ok=True)
+
+fh = TimedRotatingFileHandler(os.path.join(
+    os.path.realpath(cfg.LOGGING.DIR), "DANE-api.log"), 
+    when='W6', # start new log on sunday
+    backupCount=3)
+fh.setLevel(cfg.LOGGING.LEVEL)
 # create console handler 
 ch = logging.StreamHandler()
 ch.setLevel(cfg.LOGGING.LEVEL)
@@ -43,8 +52,10 @@ ch.setLevel(cfg.LOGGING.LEVEL)
 formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s',
         "%Y-%m-%d %H:%M:%S")
+fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
+logger.addHandler(fh)
 logger.addHandler(ch)
 
 bp = Blueprint('DANE', __name__)
@@ -424,18 +435,11 @@ class TaskListAPI(Resource):
             task.set_api(get_handler())
 
             if isinstance(docs, list):
-                tasks = task.assignMany(docs)
                 resp = {}
-                resp['success'] = []
-                resp['failed'] = []
-                for d,t in tasks.items():
-                    if isinstance(t, str):
-                        resp['failed'].append({'document_id': d, 'error': t})
-                    else:
-                        resp['success'].append(t)
+                resp['success'], resp['failed'] = task.assignMany(docs)
 
                 # potentially split this to separate call
-                return marshal(resp, _batchResultTasks), 201
+                return marshal(resp, _batchResultTasks), 200
             else:
                 task.assign(docs)    
                 return marshal(task, _task), 201
