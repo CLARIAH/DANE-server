@@ -31,7 +31,7 @@ INDEX = 'dane-index' # TODO make configurable?
 
 class Handler(DANE.handlers.ESHandler):
 
-    def __init__(self, config, queue, resume_unfinished=True):  
+    def __init__(self, config, queue, resume_unfinished=True):
         super().__init__(config, queue)
         self.queue.assign_callback(self.callback)
 
