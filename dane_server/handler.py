@@ -23,6 +23,7 @@ from urllib.parse import urlsplit
 
 import DANE.handlers
 import threading
+from DANE import Task
 
 logger = logging.getLogger('DANE')
 
@@ -30,18 +31,29 @@ INDEX = 'dane-index' # TODO make configurable?
 
 class Handler(DANE.handlers.ESHandler):
 
-    def __init__(self, config, queue, resume_unfinished=False):  #TODO change default to True
+    def __init__(self, config, queue, resume_unfinished=True):  
         super().__init__(config, queue)
         self.queue.assign_callback(self.callback)
 
         if resume_unfinished:
-            th = threading.Timer(interval=3, function=self._resume_unfinished)
-            th.daemon = True
-            th.start()
+            logger.info("Starting Task Scheduler")
+            self.scheduler = TaskScheduler(handler=self, interval=10)
+            self.scheduler.start()
 
-    def _resume_unfinished(self):
-        unfinished = self.getUnfinished()
-        if len(unfinished) > 0:
-            logger.info("Attempting to resume unfinished tasks")
-            for task in unfinished:
-                self.taskFromTaskId(task['_id']).retry()
+class TaskScheduler(threading.Thread):
+    def __init__(self, handler, interval=1):
+        super().__init__()
+        self.stopped = threading.Event()
+        self.interval = interval
+        self.daemon = True
+        self.handler = handler
+
+    def run(self):
+        while not self.stopped.wait(self.interval):
+            unfinished = self.handler.getUnfinished()
+            if len(unfinished) > 0:
+                for task in unfinished:
+                    try:
+                        Task.from_json(task).set_api(self.handler).run()
+                    except Exception as e:
+                        logger.exception("Error during task scheduler")
