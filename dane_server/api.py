@@ -105,7 +105,9 @@ _generator = api.model('generator', {
         example="Software", enum=["Organization", "Human", "Software"]),
 })
 
-_anyField = api.model('AnyField', {})
+_anyField = api.model('AnyField', {
+     '*': fields.Wildcard(fields.Raw),
+    })
 
 _document = api.model('Document', {
     '_id' : fields.String(description='DANE Assigned Document ID', 
@@ -113,7 +115,11 @@ _document = api.model('Document', {
     'target' : fields.Nested(_target, description='Document target', 
         required=True),
     'creator' : fields.Nested(_creator, description='Document creator/owner',
-        required=True)
+        required=True),
+    'created_at' : fields.String(description='Creation time', 
+        required=False, example="2020-12-12T10:53:57"),
+    'updated_at' : fields.String(description='Creation time', 
+        required=False, example="2021-01-09T12:24:32")
 })
 
 _task = api.model('Task', {
@@ -127,7 +133,13 @@ _task = api.model('Task', {
     'msg' : fields.String(description='Textual variant of state', 
         required=False, example="Success"),
     'priority' : fields.Integer(description='Task priority', required=True, 
-        default=1, min=1, max=10)
+        default=1, min=1, max=10),
+    'created_at' : fields.String(description='Creation time', 
+        required=False, example="2020-12-12T10:53:57"),
+    'updated_at' : fields.String(description='Creation time', 
+        required=False, example="2021-01-09T12:24:32"),
+    'args': fields.Nested(_anyField, description='Task arguments', 
+        required=False)
 })
 
 _result = api.model('Result', {
@@ -136,7 +148,11 @@ _result = api.model('Result', {
     'generator' : fields.Nested(_generator, description='Result generator', 
         required=True),
     'payload': fields.Nested(_anyField, description='Result payload', 
-        required=True)
+        required=True),
+    'created_at' : fields.String(description='Creation time', 
+        required=False, example="2020-12-12T10:53:57"),
+    'updated_at' : fields.String(description='Creation time', 
+        required=False, example="2021-01-09T12:24:32")
 })
 
 _worker = api.model('Worker', {
@@ -473,6 +489,7 @@ class TaskAPI(Resource):
             logger.exception('Unhandled Error')
             abort(500)
         else:
+            print(task.to_json())
             return task
 
     def delete(self, task_id):

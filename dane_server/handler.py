@@ -37,6 +37,7 @@ class Handler(DANE.handlers.ESHandler):
 
         if resume_unfinished:
             logger.info("Starting Task Scheduler")
+            # TODO make interval configable
             self.scheduler = TaskScheduler(handler=self, interval=10)
             self.scheduler.start()
 
@@ -50,7 +51,7 @@ class TaskScheduler(threading.Thread):
 
     def run(self):
         while not self.stopped.wait(self.interval):
-            unfinished = self.handler.getUnfinished()
+            unfinished = self.handler.getUnfinished(only_runnable=True)
             if len(unfinished) > 0:
                 for task in unfinished:
                     try:
