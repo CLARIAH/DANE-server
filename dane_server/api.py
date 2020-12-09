@@ -242,15 +242,9 @@ class DocumentAPI(Resource):
         try:
             doc_id = quote(doc_id) # escape potential nasties
             doc = get_handler().documentFromDocumentId(doc_id)
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.DocumentExistsError:
+            logger.debug("Document {} not found.".format(doc_id))
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -262,15 +256,9 @@ class DocumentAPI(Resource):
             doc_id = quote(doc_id) # escape potential nasties
             doc = get_handler().documentFromDocumentId(doc_id)
             doc.delete()
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.DocumentExistsError:
+            logger.debug("Document {} not found.".format(doc_id))
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -286,15 +274,9 @@ class DocumentTasksAPI(Resource):
             doc_id = quote(doc_id) # escape potential nasties
             doc = get_handler().documentFromDocumentId(doc_id)
             tasks = doc.getAssignedTasks()
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.DocumentExistsError:
+            logger.debug("Document {} not found.".format(doc_id))
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -352,15 +334,9 @@ class BatchDocumentsListAPI(Resource):
             try:
                 doc_id = quote(doc_id) # escape potential nasties
                 doc = get_handler().documentFromDocumentId(doc_id)
-            except TypeError as e:
-                logger.exception('TypeError')
-                abort(500)
-            except KeyError as e:
-                logger.exception('KeyError')
+            except DANE.errors.DocumentExistsError:
+                logger.debug("Document {} not found.".format(doc_id))
                 abort(404) 
-            except ValueError as e:
-                logger.exception('ValueError')
-                abort(400)
             except Exception as e:
                 logger.exception('Unhandled Error')
                 abort(500)
@@ -389,7 +365,8 @@ class BatchDocumentsListAPI(Resource):
             except TypeError as e:
                 logger.exception('TypeError')
                 abort(500, "{ 'document': {})".format(doc_id))
-            except KeyError as e:
+            except DANE.errors.DocumentExistsError:
+                logger.debug("Batch delete document {} not found.".format(doc_id))
                 # for batch its OK if the doc_id doesnt exist
                 pass
             except ValueError as e:
@@ -476,15 +453,9 @@ class TaskAPI(Resource):
         try:
             task_id = quote(task_id) 
             task = get_handler().taskFromTaskId(task_id)
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.TaskExistsError as e:
+            logger.exception('TaskExistsError')
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -497,15 +468,9 @@ class TaskAPI(Resource):
             task_id = quote(task_id) 
             task = get_handler().taskFromTaskId(task_id)
             task.delete()
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.TaskExistsError as e:
+            logger.exception('TaskExistsError')
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -527,16 +492,10 @@ class TaskActionAPI(Resource):
             elif action.lower() == 'reset':
                 task.reset().refresh()
             else:
-                abort(404) 
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+                abort(400) 
+        except DANE.errors.TaskExistsError as e:
+            logger.exception('TaskExistsError')
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -551,15 +510,9 @@ class ResultAPI(Resource):
         try:
             result_id = quote(result_id) 
             result = get_handler().resultFromResultId(result_id)
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.ResultExistsError as e:
+            logger.exception('ResultExistsError')
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
@@ -571,15 +524,9 @@ class ResultAPI(Resource):
             result_id = quote(result_id) 
             result = get_handler().resultFromResultId(result_id)
             result.delete()
-        except TypeError as e:
-            logger.exception('TypeError')
-            abort(500)
-        except KeyError as e:
-            logger.exception('KeyError')
+        except DANE.errors.ResultExistsError as e:
+            logger.exception('ResultExistsError')
             abort(404) 
-        except ValueError as e:
-            logger.exception('ValueError')
-            abort(400)
         except Exception as e:
             logger.exception('Unhandled Error')
             abort(500)
