@@ -599,7 +599,12 @@ class WorkersAPI(Resource):
                       "match": {
                         "task.state": 201
                       }
+                    }, {
+                      "match": {
+                        "task.state": 412
+                      }
                     }
+
                   ]
                 }
               }
