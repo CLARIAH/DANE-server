@@ -64,18 +64,19 @@ def main():
     publishQueue = RabbitMQPublisher(cfg)
     s_handler = Handler(config=cfg, queue=publishQueue)
     # TODO make interval configable
-    scheduler = TaskScheduler(handler=s_handler, interval=5)
+    scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
     scheduler.start()
 
     messageQueue.run() # blocking from here on
 
 class TaskScheduler(threading.Thread):
-    def __init__(self, handler, interval=1):
+    def __init__(self, handler, logger, interval=1):
         super().__init__()
         self.stopped = threading.Event()
         self.interval = interval
         self.daemon = True
         self.handler = handler
+        self.logger = logger
 
     def run(self):
         while not self.stopped.wait(self.interval):
@@ -83,9 +84,9 @@ class TaskScheduler(threading.Thread):
             if len(unfinished) > 0:
                 for task in unfinished:
                     try:
-                        Task.from_json(task).set_api(self.handler).run()
+                        DANE.Task.from_json(task).set_api(self.handler).run()
                     except Exception as e:
-                        logger.exception("Error during task scheduler")
+                        self.logger.exception("Error during task scheduler")
 
 if __name__ == '__main__':
     main()
