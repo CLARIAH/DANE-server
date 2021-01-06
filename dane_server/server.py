@@ -25,8 +25,10 @@ import requests
 
 from dane_server.handler import Handler, INDEX
 from dane_server.RabbitMQListener import RabbitMQListener
+from dane_server.RabbitMQPublisher import RabbitMQPublisher
 import DANE
 from DANE.config import cfg
+import threading
 
 def main():
     logger = logging.getLogger('DANE')
@@ -57,7 +59,33 @@ def main():
     handler = Handler(config=cfg, queue=messageQueue)
     logger.info('Connected to ElasticSearch')
     logger.info('Connecting to RabbitMQ')
+
+    logger.info("Starting Task Scheduler")
+    publishQueue = RabbitMQPublisher(cfg)
+    s_handler = Handler(config=cfg, queue=publishQueue)
+    # TODO make interval configable
+    scheduler = TaskScheduler(handler=s_handler, interval=5)
+    scheduler.start()
+
     messageQueue.run() # blocking from here on
+
+class TaskScheduler(threading.Thread):
+    def __init__(self, handler, interval=1):
+        super().__init__()
+        self.stopped = threading.Event()
+        self.interval = interval
+        self.daemon = True
+        self.handler = handler
+
+    def run(self):
+        while not self.stopped.wait(self.interval):
+            unfinished = self.handler.getUnfinished(only_runnable=True)
+            if len(unfinished) > 0:
+                for task in unfinished:
+                    try:
+                        Task.from_json(task).set_api(self.handler).run()
+                    except Exception as e:
+                        logger.exception("Error during task scheduler")
 
 if __name__ == '__main__':
     main()
