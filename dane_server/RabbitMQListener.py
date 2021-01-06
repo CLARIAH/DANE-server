@@ -77,9 +77,14 @@ class RabbitMQListener(RabbitMQHandler):
         # TODO find way to decode correctly to JSON
         body = json.loads(body.decode("utf-8"))
 
-        cb = functools.partial(self._do_callback, 
-                props.correlation_id, body)
-        self.connection.add_callback_threadsafe(cb)
+        #cb = functools.partial(self._do_callback, 
+        #        props.correlation_id, body)
+        #self.connection.add_callback_threadsafe(cb)
+        # Testing with blocking here for callback
+        # otherwise it empties queue, but processes the
+        # queue slowly
+        self._do_callback(props.correlation_id, body)
+
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def publish(self, routing_key, task, document):
