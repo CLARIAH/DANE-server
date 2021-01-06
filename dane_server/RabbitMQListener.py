@@ -31,9 +31,10 @@ class RabbitMQListener(RabbitMQHandler):
 
     def __init__(self, config):
         super().__init__(config)
+        self._connected = False
 
     def connect(self):
-        if self._connected:
+        if not self._connected:
             
             super().connect()
 
