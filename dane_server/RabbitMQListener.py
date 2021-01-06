@@ -21,6 +21,7 @@ from time import sleep
 import functools
 import logging
 from DANE.handlers import RabbitMQHandler 
+import DANE
 
 logger = logging.getLogger('DANE')
 
@@ -32,15 +33,15 @@ class RabbitMQListener(RabbitMQHandler):
         super().__init__(config)
 
     def connect(self):
-        if not hasattr(self, 'connection') or \
-            not self.connection or self.connection.is_closed:
+        if self._connected:
             
-                super().connect()
+            super().connect()
 
-                self.channel.basic_consume(
-                    queue=self.config.RABBITMQ.RESPONSE_QUEUE,
-                    on_message_callback=self._on_response,
-                    auto_ack=False)
+            self.queue = self.config.RABBITMQ.RESPONSE_QUEUE
+
+            self.channel.basic_qos(prefetch_count=1)
+            self._connected = True
+            self._is_interrupted = False
 
     def _process_data_events(self):
         while True:
@@ -58,11 +59,22 @@ class RabbitMQListener(RabbitMQHandler):
             sleep(0.1)
 
     def run(self):
-        logger.debug("Starting blocking queue listener")
-        self._process_data_events()
+        logger.debug("Starting blocking response queue listener")
+        if self._connected:
+            for method, props, body in self.channel.consume(self.queue, 
+                    inactivity_timeout=1):
+                with self.internal_lock:
+                    if self._is_interrupted or not self._connected:
+                        break
+                    if not method:
+                        continue
+                    self._on_response(self.channel, method, props, body)
+        else:
+            raise DANE.errors.ResourceConnectionError('Not connected to AMQ')
 
     def stop(self):
-        self.channel.stop_consuming()
+        if self._connected:
+            self._is_interrupted = True
 
     def assign_callback(self, callback):
         self.callback = callback
@@ -77,12 +89,6 @@ class RabbitMQListener(RabbitMQHandler):
         # TODO find way to decode correctly to JSON
         body = json.loads(body.decode("utf-8"))
 
-        #cb = functools.partial(self._do_callback, 
-        #        props.correlation_id, body)
-        #self.connection.add_callback_threadsafe(cb)
-        # Testing with blocking here for callback
-        # otherwise it empties queue, but processes the
-        # queue slowly
         self._do_callback(props.correlation_id, body)
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
