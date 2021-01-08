@@ -78,7 +78,7 @@ class TaskScheduler(threading.Thread):
         self.logger = logger
 
     def run(self):
-        logger.info("Starting Task Scheduler")
+        self.logger.info("Starting Task Scheduler")
         while not self.stopped.wait(self.interval):
             unfinished = self.handler.getUnfinished(only_runnable=True)
             if len(unfinished) > 0:
