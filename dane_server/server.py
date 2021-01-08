@@ -71,7 +71,7 @@ def main():
         scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
         scheduler.run()
     else:
-        logger.info(os.environ['SUPERVISOR_PROCESS_NAME'], 'started without task scheduler')
+        logger.info(os.environ['SUPERVISOR_PROCESS_NAME'] + ' started without task scheduler')
 
     messageQueue.run() # blocking from here on
 
