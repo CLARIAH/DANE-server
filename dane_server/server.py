@@ -60,14 +60,13 @@ def main():
     logger.info('Connected to ElasticSearch')
     logger.info('Connecting to RabbitMQ')
 
-    logger.info("Starting Task Scheduler")
     publishQueue = RabbitMQPublisher(cfg)
     s_handler = Handler(config=cfg, queue=publishQueue)
     # TODO make interval configable
     scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
-    scheduler.start()
+    scheduler.run()
 
-    publishQueue.run() # blocking from here on
+    messageQueue.run() # blocking from here on
 
 class TaskScheduler(threading.Thread):
     def __init__(self, handler, logger, interval=1):
@@ -79,6 +78,7 @@ class TaskScheduler(threading.Thread):
         self.logger = logger
 
     def run(self):
+        logger.info("Starting Task Scheduler")
         while not self.stopped.wait(self.interval):
             unfinished = self.handler.getUnfinished(only_runnable=True)
             if len(unfinished) > 0:
