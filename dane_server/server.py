@@ -64,7 +64,7 @@ def main():
     # or if we're the first (this does restrict naming scheme 
     # used in supervisor TODO
     if ('SUPERVISOR_PROCESS_NAME' not in os.environ or
-        os.environ['SUPERVISOR_PROCESS_NAME'].endswith('_1'): 
+        os.environ['SUPERVISOR_PROCESS_NAME'].endswith('_1')): 
         publishQueue = RabbitMQPublisher(cfg)
         s_handler = Handler(config=cfg, queue=publishQueue)
         # TODO make interval configable
