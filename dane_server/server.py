@@ -67,7 +67,7 @@ def main():
     scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
     scheduler.start()
 
-    messageQueue.run() # blocking from here on
+    publishQueue.run() # blocking from here on
 
 class TaskScheduler(threading.Thread):
     def __init__(self, handler, logger, interval=1):
