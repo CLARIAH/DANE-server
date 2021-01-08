@@ -64,14 +64,14 @@ def main():
     # or if we're the first (this does restrict naming scheme 
     # used in supervisor TODO
     if ('SUPERVISOR_PROCESS_NAME' not in os.environ or
-        os.environ['SUPERVISOR_PROCESS_NAME'].endswith('_1')): 
+        os.environ['SUPERVISOR_PROCESS_NAME'].endswith('_00')): 
         publishQueue = RabbitMQPublisher(cfg)
         s_handler = Handler(config=cfg, queue=publishQueue)
         # TODO make interval configable
         scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
         scheduler.run()
     else:
-        print(os.environ['SUPERVISOR_PROCESS_NAME'], 'started without task scheduler')
+        logger.info(os.environ['SUPERVISOR_PROCESS_NAME'], 'started without task scheduler')
 
     messageQueue.run() # blocking from here on
 
