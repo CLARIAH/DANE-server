@@ -17,7 +17,7 @@ from functools import wraps
 
 import json
 import os
-import sys
+import sys, os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import quote
@@ -60,11 +60,18 @@ def main():
     logger.info('Connected to ElasticSearch')
     logger.info('Connecting to RabbitMQ')
 
-    publishQueue = RabbitMQPublisher(cfg)
-    s_handler = Handler(config=cfg, queue=publishQueue)
-    # TODO make interval configable
-    scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
-    scheduler.run()
+    # only start task scheduler if we run without supervisor
+    # or if we're the first (this does restrict naming scheme 
+    # used in supervisor TODO
+    if ('SUPERVISOR_PROCESS_NAME' not in os.environ or
+        os.environ['SUPERVISOR_PROCESS_NAME'].endswith('_1'): 
+        publishQueue = RabbitMQPublisher(cfg)
+        s_handler = Handler(config=cfg, queue=publishQueue)
+        # TODO make interval configable
+        scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
+        scheduler.run()
+    else:
+        print(os.environ['SUPERVISOR_PROCESS_NAME'], 'started without task scheduler')
 
     messageQueue.run() # blocking from here on
 
