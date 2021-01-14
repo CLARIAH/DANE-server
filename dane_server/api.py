@@ -200,6 +200,18 @@ _searchResult = api.model('SearchResult', {
         required=True)
 })
 
+_workerTasks = api.model('WorkerTasks', {
+    'total' : fields.Integer(description='Total Tasks', required=True, example=1),
+    'tasks' : fields.List(fields.Nested(_task), description='Tasks returned', 
+        required=True)
+})
+
+_massResetResult = api.model('MassResetResult', {
+    'total' : fields.Integer(description='Total Tasks affected', required=True, example=1),
+    'error' : fields.String(description='Error message', 
+        required=False, example="ConnectionError")
+})
+
 @ns_doc.route('/')
 class DocumentListAPI(Resource):
     
@@ -460,7 +472,6 @@ class TaskAPI(Resource):
             logger.exception('Unhandled Error')
             abort(500)
         else:
-            print(task.to_json())
             return task
 
     def delete(self, task_id):
@@ -561,7 +572,7 @@ class WorkersListAPI(Resource):
 @ns_workers.route('/<task_key>')
 class WorkersAPI(Resource):
 
-    @ns_doc.marshal_with(_task, as_list=True)
+    @ns_doc.marshal_with(_workerTasks)
     def get(self, task_key):
 
         # Get tasks which are assigned to this worker that errored
@@ -578,11 +589,6 @@ class WorkersAPI(Resource):
                             "field": "target.id"
                           }
                         }
-                      }
-                    },
-                    {
-                      "match": {
-                        "task.key": task_key
                       }
                     }
                   ],
@@ -627,8 +633,44 @@ class WorkersAPI(Resource):
         else:
             tasks = []
 
-        return tasks
+        return {'total': result['hits']['total']['value'], 'tasks': tasks}
 
+@ns_workers.route('/<task_key>/reset')
+@ns_workers.route('/<task_key>/reset/<task_state>')
+class WorkersAPI(Resource):
+
+    @ns_doc.marshal_with(_massResetResult)
+    def get(self, task_key, task_state = 500):
+
+        # Get tasks which are assigned to this worker that errored
+        query = {
+              "query": {
+                "bool": {
+                  "must": [
+                    {
+                      "match": {
+                        "task.key": task_key
+                      }
+                    },
+                    {
+                      "match": {
+                        "task.state": task_state
+                      }
+                    }
+                  ]
+                }
+              },
+              "script": {
+                "source": "ctx._source['task']['state'] = 205; ctx._source['task']['msg'] = 'Manual reset';"
+              }
+            }
+        
+        try:
+            result = get_handler().es.update_by_query(index=INDEX, body=query, refresh=True)
+            return {'total': result['total'], 'error' : "No tasks affected" if result['total'] == 0 else ""}
+        except Exception as e:
+            logger.exception("Mass reset error")
+            return {'total': 0, 'error': e}
 
 """------------------------------------------------------------------------------
 DevOPs checks

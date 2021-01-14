@@ -115,6 +115,8 @@
     <v-divider></v-divider>
 
     <v-card-actions>
+      <div class="text-overline" display="inline-block" v-if="doc.created_at !== null">Created at: {{ doc.created_at }}</div>&nbsp;
+      <div class="text-overline" display="inline-block" v-if="doc.updated_at !== null && doc.updated_at != doc.created_at">Last updated at: {{ doc.updated_at }}</div>
       <v-spacer></v-spacer>
       <dane-newtask v-model="doc._id" v-on:newtask="loadTasks()"></dane-newtask>
       <v-btn text small @click.stop="dialog = true">view JSON</v-btn>
@@ -212,14 +214,24 @@
     outlined
     :key="task._id"
   > 
-  <v-card-title class="headline">{{ task._id }}</v-card-title>
-     <v-card-subtitle><v-btn small text @click="goTask(task.key)">{{ task.key }}</v-card-subtitle>
+  <v-card-title class="headline">{{ task._id }}&nbsp;<v-chip v-if="task.priority > 1">{{ task.priority }}</v-chip></v-card-title>
+     <v-card-subtitle><v-btn small text @click="goTask(task.key)">{{ task.key }}</v-btn></v-card-subtitle>
 
   <v-card-text class="text--primary">
     <v-chip :color="colour(task.state)"><strong>{{ task.state }}</strong></v-chip> {{ task.msg }}
+    <div v-if="task.args['*'] !== null">
+      <br/><b>Task arguments:</b>
+      <ul>
+    <li v-for="v,p in task.args">
+      {{ p }}: {{ v }}
+    </li>
+      </ul>
+    </div>
   </v-card-text>
     <v-divider></v-divider>
       <v-card-actions>
+      <div class="text-overline" display="inline-block" v-if="task.created_at !== null">Created at: {{ task.created_at }}</div>&nbsp;
+      <div class="text-overline" display="inline-block" v-if="task.updated_at !== null && task.updated_at !== task.created_at">Last updated at: {{ task.updated_at }}</div>
         <v-spacer></v-spacer>
 
         <v-btn
@@ -265,10 +277,39 @@
 
  <template id="dane-worker-details">
    <div>
-     <template v-if="tasks.length > 0">
+     <template v-if="taskcount > 0">
     <v-alert type="error">
-      {{ tasks.length }} errored tasks found for worker {{ taskkey }}!
+      {{ taskcount }} errored tasks found for worker {{ taskkey }}!
     </v-alert>
+    <v-form>
+      <v-container>
+        <v-row>
+          <v-col cols="4">
+      Reset all tasks with state 
+          </v-col>
+          <v-col cols="4">
+          <v-select
+             v-model="state"
+             :items="resetstates"
+          label="State"
+          required
+        ></v-select>
+          </v-col>
+          <v-col cols="4">
+            <v-btn @click="massreset">Go</v-btn>
+          </v-col>
+        </v-row>
+        <v-row v-if="resetres.length > 0">
+          <v-col>
+            <v-card class="grey lighten-5">
+              <v-card-text>
+          {{ resetres }}
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-form>
     <dane-tasklist v-model="tasks" v-on:newval="newVal($event)"></dane-tasklist>
      </template>
       <v-alert type="success" v-else>

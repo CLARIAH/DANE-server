@@ -94,6 +94,9 @@ class TaskScheduler(threading.Thread):
                         DANE.Task.from_json(task).set_api(self.handler).run()
                     except Exception as e:
                         self.logger.exception("Error during task scheduler")
+            else:
+                # for heartbeat
+                self.handler.queue.connection.process_data_events() 
 
 if __name__ == '__main__':
     main()

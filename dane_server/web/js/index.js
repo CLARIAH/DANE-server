@@ -245,7 +245,7 @@ Vue.component('dane-tasklist', {
       colour: function(s) {
         if ([200].includes(parseInt(s))) {
           return 'green';
-        } else if ([102, 201].includes(parseInt(s))) {
+        } else if ([102, 201, 205].includes(parseInt(s))) {
           return 'yellow';
         } else {
           return 'red';
@@ -416,6 +416,10 @@ Vue.component('dane-worker-details', {
    data: function() {
       return {
         tasks: [],
+        taskcount: 0,
+        resetstates: [400, 403, 404, 422, 500],
+        state: 500,
+        resetres: "",
         errored: false
       }
     },
@@ -436,7 +440,8 @@ Vue.component('dane-worker-details', {
           return resp.json() 
         })
         .then(data => {
-          this.tasks = data;
+          this.tasks = data['tasks'];
+          this.taskcount = data['total'];
           })
         .catch(error => {
           // because network errors are type errors..
@@ -460,7 +465,32 @@ Vue.component('dane-worker-details', {
           return true;
         }
       });
-     }
+     },
+    massreset: function() {
+      fetch(new URL(`workers/${this.taskkey}/reset/${this.state}`, Config.API).href) 
+        .then((resp) => {
+          if (!resp.ok) {
+            this.errored = true;
+            throw Error(resp.statusText);
+          }
+          return resp.json() 
+        })
+        .then(data => {
+            if (data['error'].length > 0) {
+              this.resetres = data['error'];
+            } else {
+              this.resetres = data['total'].toString() + " tasks reset.";
+              this.load()
+            }
+          })
+        .catch(error => {
+          // because network errors are type errors..
+          if (error.name == 'TypeError') {
+            this.errored = true;
+          }
+          throw error;
+        });
+    }
    }
 })
 

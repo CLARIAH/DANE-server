@@ -44,21 +44,6 @@ class RabbitMQListener(RabbitMQHandler):
             self._connected = True
             self._is_interrupted = False
 
-    def _process_data_events(self):
-        while True:
-            with self.internal_lock:
-                try:
-                    self.connection.process_data_events()
-                except (pika.exceptions.StreamLostError,
-                        pika.exceptions.ConnectionClosedByBroker) as e:
-                    logger.warning(
-                            'RabbitMQ connection interrupted, reconnecting')
-                    self.connect()
-                except Exception as e:
-                    logger.exception('RabbitMQ connection lost')
-                    raise e
-            sleep(0.1)
-
     def run(self):
         logger.debug("Starting blocking response queue listener")
         if self._connected:
