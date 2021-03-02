@@ -79,10 +79,10 @@ class RabbitMQListener(RabbitMQHandler):
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    def publish(self, routing_key, task, document):
+    def publish(self, routing_key, task, document, retry=False):
         with self.internal_lock:
             try:
-                super().publish(routing_key, task, document)
+                super().publish(routing_key, task, document, retry)
             except pika.exceptions.UnroutableError:
                 fail_resp = { 'state': 422, 
                         'message': 'Unroutable task' }

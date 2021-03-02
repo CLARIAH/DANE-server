@@ -31,9 +31,9 @@ class RabbitMQPublisher(RabbitMQHandler):
     def assign_callback(self, callback):
         self.callback = callback
 
-    def publish(self, routing_key, task, document):
+    def publish(self, routing_key, task, document, retry=False):
         try:
-            super().publish(routing_key, task, document)
+            super().publish(routing_key, task, document, retry)
         except pika.exceptions.UnroutableError:
             fail_resp = { 'state': 422, 
                     'message': 'Unroutable task' }
