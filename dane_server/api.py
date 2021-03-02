@@ -25,7 +25,6 @@ import os
 import sys
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from urllib.parse import quote
 import requests
 
 from dane_server.handler import INDEX
@@ -252,7 +251,6 @@ class DocumentAPI(Resource):
     @ns_doc.marshal_with(_document)
     def get(self, doc_id):
         try:
-            doc_id = quote(doc_id) # escape potential nasties
             doc = get_handler().documentFromDocumentId(doc_id)
         except DANE.errors.DocumentExistsError:
             logger.debug("Document {} not found.".format(doc_id))
@@ -265,7 +263,6 @@ class DocumentAPI(Resource):
 
     def delete(self, doc_id):
         try:
-            doc_id = quote(doc_id) # escape potential nasties
             doc = get_handler().documentFromDocumentId(doc_id)
             doc.delete()
         except DANE.errors.DocumentExistsError:
@@ -283,7 +280,6 @@ class DocumentTasksAPI(Resource):
     @ns_doc.marshal_with(_task, as_list=True)
     def get(self, doc_id):
         try:
-            doc_id = quote(doc_id) # escape potential nasties
             doc = get_handler().documentFromDocumentId(doc_id)
             tasks = doc.getAssignedTasks()
         except DANE.errors.DocumentExistsError:
@@ -344,7 +340,6 @@ class BatchDocumentsListAPI(Resource):
         output = []
         for doc_id in docs:
             try:
-                doc_id = quote(doc_id) # escape potential nasties
                 doc = get_handler().documentFromDocumentId(doc_id)
             except DANE.errors.DocumentExistsError:
                 logger.debug("Document {} not found.".format(doc_id))
@@ -371,7 +366,6 @@ class BatchDocumentsListAPI(Resource):
 
         for doc_id in docs:
             try:
-                doc_id = quote(doc_id) # escape potential nasties
                 doc = get_handler().documentFromDocumentId(doc_id)
                 doc.delete()
             except TypeError as e:
@@ -401,8 +395,8 @@ class SearchAPI(Resource):
             'type': 'int' , 'default': '1', 'required': False}})
     @ns_doc.marshal_with(_searchResult, as_list=True)
     def get(self):
-        target_id = quote(request.args.get('target_id', '*')).replace('%2A', '*')
-        creator_id = quote(request.args.get('creator_id', '*')).replace('%2A', '*')
+        target_id = request.args.get('target_id', '*')
+        creator_id = request.args.get('creator_id', '*')
         result, count = get_handler().search(target_id, creator_id, 
                 int(request.args.get('page', 1)))
         return { 'total': count, 'hits' : result }
@@ -463,7 +457,6 @@ class TaskAPI(Resource):
     @ns_doc.marshal_with(_task)
     def get(self, task_id):
         try:
-            task_id = quote(task_id) 
             task = get_handler().taskFromTaskId(task_id)
         except DANE.errors.TaskExistsError as e:
             logger.exception('TaskExistsError')
@@ -476,7 +469,6 @@ class TaskAPI(Resource):
 
     def delete(self, task_id):
         try:
-            task_id = quote(task_id) 
             task = get_handler().taskFromTaskId(task_id)
             task.delete()
         except DANE.errors.TaskExistsError as e:
@@ -494,7 +486,6 @@ class TaskActionAPI(Resource):
     @ns_doc.marshal_with(_task)
     def get(self, task_id, action):
         try:
-            task_id = quote(task_id) 
             task = get_handler().taskFromTaskId(task_id)
             if action.lower() == 'retry':
                 task.retry(force=False).refresh()
@@ -513,13 +504,28 @@ class TaskActionAPI(Resource):
         else:
             return task
 
+@ns_task.route('/<task_id>/document')
+class TaskParentAPI(Resource):
+
+    @ns_doc.marshal_with(_document)
+    def get(self, task_id):
+        try:
+            doc = get_handler().documentFromTaskId(task_id)
+        except DANE.errors.TaskExistsError as e:
+            logger.exception('TaskExistsError')
+            abort(404) 
+        except Exception as e:
+            logger.exception('Unhandled Error')
+            abort(500)
+        else:
+            return doc
+
 @ns_result.route('/<result_id>')
 class ResultAPI(Resource):
 
     @ns_doc.marshal_with(_result)
     def get(self, result_id):
         try:
-            result_id = quote(result_id) 
             result = get_handler().resultFromResultId(result_id)
         except DANE.errors.ResultExistsError as e:
             logger.exception('ResultExistsError')
@@ -532,7 +538,6 @@ class ResultAPI(Resource):
 
     def delete(self, result_id):
         try:
-            result_id = quote(result_id) 
             result = get_handler().resultFromResultId(result_id)
             result.delete()
         except DANE.errors.ResultExistsError as e:
@@ -577,7 +582,9 @@ class WorkersAPI(Resource):
 
         # Get tasks which are assigned to this worker that errored
         query = {
-             "_source": "task",
+            "_source": {
+                "excludes": [ "role" ]    
+             },
               "query": {
                 "bool": {
                   "must": [
@@ -624,14 +631,12 @@ class WorkersAPI(Resource):
                 })
         
         result = get_handler().es.search(index=INDEX, body=query, size=20)
+        tasks = []
         if result['hits']['total']['value'] > 0:
-            tasks = [{'_id': t['_id'], 
-                'key': t['_source']['task']['key'],
-                'state': t['_source']['task']['state'],
-                'msg': t['_source']['task']['msg']} for t \
-                    in result['hits']['hits']]
-        else:
-            tasks = []
+            for t in result['hits']['hits']:
+                t['_source']['task']['_id'] = t['_id']
+                task = DANE.Task.from_json(t['_source'])
+                tasks.append(json.loads(task.to_json()))
 
         return {'total': result['hits']['total']['value'], 'tasks': tasks}
 

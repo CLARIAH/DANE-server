@@ -234,6 +234,12 @@
       <div class="text-overline" display="inline-block" v-if="task.updated_at !== null && task.updated_at !== task.created_at">Last updated at: {{ task.updated_at }}</div>
         <v-spacer></v-spacer>
 
+        <v-btn v-if="in_doc.trim() == 'false'"
+          small text
+          @click="goDoc(task._id)"
+        >
+        Go to document 
+        </v-btn>
         <v-btn
           small text
           @click="retryTask(task._id)"
@@ -310,7 +316,7 @@
         </v-row>
       </v-container>
     </v-form>
-    <dane-tasklist v-model="tasks" v-on:newval="newVal($event)"></dane-tasklist>
+    <dane-tasklist v-model="tasks" v-on:newval="newVal($event)" in_doc="false"></dane-tasklist>
      </template>
       <v-alert type="success" v-else>
         No error state tasks found for worker {{ taskkey }}.

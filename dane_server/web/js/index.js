@@ -194,13 +194,31 @@ Vue.component('dane-doc-searchbar', {
 
 Vue.component('dane-tasklist', {
   template: '#dane-tasklist',
-  props: ['value'],
+  props: {
+    value: Array,
+    in_doc: {
+      type: String,
+      default: "true"
+    }
+  },
    data: function() {
       return {
         errored: false,
       }
     },
   methods: {
+      goDoc: function(id) {
+        fetch(new URL(`task/${id}/document`, Config.API).href) 
+        .then((resp) => {
+          if (!resp.ok) {
+            throw Error(resp.statusText, resp.status);
+          }
+          return resp.json() 
+        })
+        .then(data => {
+          vm.switchDoc(data['_id']);
+        })
+      },
       retryTask: function(id) {
         this.doAction(id, 'retry');
       },
