@@ -69,7 +69,7 @@ def main():
         s_handler = Handler(config=cfg, queue=publishQueue)
         # TODO make interval configable
         scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
-        scheduler.run()
+        scheduler.start()
     else:
         logger.info(os.environ['SUPERVISOR_PROCESS_NAME'] + ' started without task scheduler')
 
