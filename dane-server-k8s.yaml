@@ -1,5 +1,5 @@
 ---
-apiVersion: v1
+apiVersion: v1 # -------------- HOOK UP EXTERNAL ELASTICSEARCH ------------
 kind: Service
 metadata:
   name: elasticsearch
@@ -19,7 +19,7 @@ subsets:
     ports:
       - port: 9200
 ---
-apiVersion: v1
+apiVersion: v1 # -------------- RUN RABBITMQ ------------------------------
 kind: Pod
 metadata:
   name: dane-rabbitmq-server-pod
@@ -74,7 +74,7 @@ spec:
             port:
               number: 80
 ---
-apiVersion: v1
+apiVersion: v1 # -------------- RUN DANE SERVER (TASK SCHEDULER ONLY) ------------
 kind: Pod
 metadata:
   name: dane-server-pod
@@ -94,7 +94,7 @@ spec:
     configMap:
       name: dane-server-cfg
 ---
-apiVersion: v1
+apiVersion: v1 # -------------- RUN DANE SERVER API -------------------------------
 kind: Pod
 metadata:
   name: dane-server-api-pod

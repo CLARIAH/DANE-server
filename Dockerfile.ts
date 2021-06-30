@@ -10,6 +10,10 @@ COPY README.md /src
 RUN mkdir /root/.DANE
 COPY config.yml /root/.DANE
 
+RUN mkdir /tmp/DANE-data
+RUN mkdir /tmp/DANE-data/TEMP
+RUN mkdir /tmp/DANE-data/OUT
+
 WORKDIR /src
 
 RUN pip install --no-cache-dir -r requirements.txt

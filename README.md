@@ -9,26 +9,7 @@ and each worker with this binding_key listens to a shared queue. Once a worker i
 DANE-server depends on the [DANE](https://github.com/CLARIAH/DANE) package for the logic of how to iterate over tasks, and how to interpret a task
 in general.
 
-
-# Kubernetes installation
-
-These instructions are optimized for `minikube`, which is for local development only. For deployment to a proper k8s cluster, you're on your own for now...
-
-## Create a configmap for config.yml
-
-Now before applying the Kubernetes file `dane-server-k8s.yaml` to your cluster, first create a ConfigMap for the config.yml the DANE server uses as its central configuration file:
-
-```
-kubectl create configmap dane-server-cfg --from-file ~/workspace/DANE-server/config.yml
-```
-
-Now the ConfigMap is there, it's possible to run:
-
-```
-kubectl apply -f dane-server-k8s.yaml
-```
-
-# Manual Installation
+# Local Installation
 
 DANE-server has been tested with Python 3 and is installable through pip:
 
@@ -72,3 +53,58 @@ The DANE api is documented with a swagger UI, available at: http://localhost:550
 ## Examples
 
 Examples of how to work with DANE can be found at: https://dane.readthedocs.io/en/latest/examples.html
+
+# Docker
+
+To run DANE-server, using Docker make sure to install a Docker Engine, e.g. Docker Desktop for OSX.
+
+## Create a base_config.yml
+
+Create the following file in ./dane_server/base_config.yml:
+
+```
+# now used for Docker only (change when running DANE-server locally)
+LOGGING:
+    DIR: "./dane-server-logs/"
+    LEVEL: "DEBUG"
+DANE_SERVER:
+    TEMP_FOLDER: "/tmp/DANE-data/TEMP/"
+    OUT_FOLDER: "/tmp/DANE-data/OUT/"
+
+```
+
+## Build the Docker images
+
+As the DANE-server has two separate processes. Two images need to be created:
+
+- One for running the Task Scheduler
+- One for running the API
+
+Run the following from the main directory of this repo:
+
+```
+docker build -t dane-server -f Dockerfile.ts .
+docker build -t dane-server-api -f Dockerfile.api .
+```
+
+After the images have been successfully built, it is possible to run DANE-server via Kubernetes as well
+
+# Kubernetes
+
+These instructions are optimized for `minikube`, which is for local development only. For deployment to a proper k8s cluster, you're on your own for now...
+
+## Create a configmap for config.yml
+
+Now before applying the Kubernetes file `dane-server-k8s.yaml` to your cluster, first create a ConfigMap for the config.yml the DANE server uses as its central configuration file:
+
+```
+kubectl create configmap dane-server-cfg --from-file [DANE-SERVER-HOME]/config.yml
+```
+
+(TODO the contents of the config.yml)
+
+Now the ConfigMap is there, it's possible to run:
+
+```
+kubectl apply -f dane-server-k8s.yaml
+```
