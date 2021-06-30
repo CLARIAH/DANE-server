@@ -9,7 +9,26 @@ and each worker with this binding_key listens to a shared queue. Once a worker i
 DANE-server depends on the [DANE](https://github.com/CLARIAH/DANE) package for the logic of how to iterate over tasks, and how to interpret a task
 in general.
 
-# Installation
+
+# Kubernetes installation
+
+These instructions are optimized for `minikube`, which is for local development only. For deployment to a proper k8s cluster, you're on your own for now...
+
+## Create a configmap for config.yml
+
+Now before applying the Kubernetes file `dane-server-k8s.yaml` to your cluster, first create a ConfigMap for the config.yml the DANE server uses as its central configuration file:
+
+```
+kubectl create configmap dane-server-cfg --from-file ~/workspace/DANE-server/config.yml
+```
+
+Now the ConfigMap is there, it's possible to run:
+
+```
+kubectl apply -f dane-server-k8s.yaml
+```
+
+# Manual Installation
 
 DANE-server has been tested with Python 3 and is installable through pip:
 

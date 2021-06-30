@@ -1,0 +1,144 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9200
+      targetPort: 9200
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: elasticsearch
+subsets:
+  - addresses:
+    - ip: 44.242.32.23
+    ports:
+      - port: 9200
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dane-rabbitmq-server-pod
+  labels:
+    app: dane-rabbitmq
+spec:
+  containers:
+  - name: dane-rabbitmq-server
+    image: rabbitmq:3-management
+    ports:
+    - containerPort: 15672
+    - containerPort: 5672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dane-rabbitmq-management
+spec:
+  selector:
+    app: dane-rabbitmq
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dane-rabbitmq-api
+spec:
+  selector:
+    app: dane-rabbitmq
+  ports:
+    - protocol: TCP
+      port: 5672
+      targetPort: 5672
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dane-rabbitmq-ingress
+spec:
+  rules:
+  - host: rabbitmq.dane.nl
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dane-rabbitmq-management
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dane-server-pod
+  labels:
+    app: dane-server
+spec:
+  containers:
+  - name: dane-server
+    image: dane-server
+    imagePullPolicy: Never
+    volumeMounts:
+    - name: dane-server-mnt
+      mountPath: "/root/.DANE"
+      readOnly: true
+  volumes:
+  - name: dane-server-mnt
+    configMap:
+      name: dane-server-cfg
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dane-server-api-pod
+  labels:
+    app: dane-server-api
+spec:
+  containers:
+  - name: dane-server-api
+    image: dane-server-api
+    imagePullPolicy: Never
+    volumeMounts:
+    - name: dane-server-mnt
+      mountPath: "/root/.DANE"
+      readOnly: true
+  volumes:
+  - name: dane-server-mnt
+    configMap:
+      name: dane-server-cfg
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dane-server-api-service
+spec:
+  selector:
+    app: dane-server-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5500
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dane-server-ingress
+spec:
+  rules:
+  - host: api.dane.nl
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dane-server-api-service
+            port:
+              number: 80
