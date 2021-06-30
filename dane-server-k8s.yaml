@@ -15,7 +15,7 @@ metadata:
   name: elasticsearch
 subsets:
   - addresses:
-    - ip: 44.242.32.23
+    - ip: 11.22.33.44 #your ES host
     ports:
       - port: 9200
 ---
