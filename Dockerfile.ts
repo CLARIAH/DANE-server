@@ -10,9 +10,9 @@ COPY README.md /src
 RUN mkdir /root/.DANE
 COPY config.yml /root/.DANE
 
-RUN mkdir /tmp/DANE-data
-RUN mkdir /tmp/DANE-data/TEMP
-RUN mkdir /tmp/DANE-data/OUT
+RUN mkdir /mnt/dane-fs
+RUN mkdir /mnt/dane-fs/input-files
+RUN mkdir /mnt/dane-fs/output-files
 
 WORKDIR /src
 
