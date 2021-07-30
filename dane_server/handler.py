@@ -23,10 +23,11 @@ from urllib.parse import urlsplit
 
 import DANE.handlers
 from DANE import Task
+from DANE.config import cfg
 
 logger = logging.getLogger('DANE')
 
-INDEX = 'dane-index' # TODO make configurable?
+INDEX = cfg.DANE_SERVER.ES_INDEX # 'dane-index' # TODO make configurable?
 
 class Handler(DANE.handlers.ESHandler):
 

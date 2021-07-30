@@ -9,5 +9,4 @@ docs/_build/
 .ipynb_checkpoints/
 venv
 .DS_Store
-dane_server/base_config.yml
 dane_server/dane-server-logs
