@@ -93,18 +93,47 @@ After the images have been successfully built, it is possible to run DANE-server
 
 These instructions are optimized for `minikube`, which is for local development only. For deployment to a proper k8s cluster, you're on your own for now...
 
+Note that the provided Kubernetes config only provisions your k8s cluster with:
+
+- Endpoint to external Elasticsearch (make sure you got one running)
+- RabbitMQ
+- DANE server (task scheduler)
+- DANE server API
+
+In order to get a bunch of workers setup, you can check the k8s config files in [DANE-asr-worker](https://github.com/beeldengeluid/DANE-asr-worker) repository (later on more examples should follow).
+
 ## Create a configmap for config.yml
 
-Now before applying the Kubernetes file `dane-server-k8s.yaml` to your cluster, first create a ConfigMap for the config.yml the DANE server uses as its central configuration file:
+First make sure to create the config.yml from the config-k8s.yml:
 
 ```
-kubectl create configmap dane-server-cfg --from-file [DANE-SERVER-HOME]/config.yml
+cp config-k8s.yml config.yml
 ```
 
-(TODO the contents of the config.yml)
+Now before applying the Kubernetes file `dane-server-k8s.yaml` to your cluster, first create a ConfigMap for config.yml
 
-Now the ConfigMap is there, it's possible to run:
+```
+kubectl create configmap dane-server-cfg --from-file config.yml
+```
+
+Now the ConfigMap is there, make sure to check that dane-server-k8s.yml points to a existing Elasticsearch host. After that you can go ahead and run:
 
 ```
 kubectl apply -f dane-server-k8s.yaml
 ```
+
+## Configure your local DNS to access the API (and RabbitMQ dashboard)
+
+Check the ip assigned to the `dane-server-ingress` (and `dane-rabbitmq-ingress`) by running:
+
+```
+kubectl get ingress
+```
+
+grab the IP from the `ADDRESS` column and put this in your `/etc/hosts` file:
+
+```
+{IP}    api.dane.nl rabbitmq.dane.nl
+```
+
+**Note**: you can assign different domain names by editing the Ingresses in `dane-server-k8s.yaml`
