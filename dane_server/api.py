@@ -27,11 +27,12 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import requests
 
-from dane_server.handler import INDEX
 from DANE.handlers import ESHandler as Handler
 from dane_server.RabbitMQPublisher import RabbitMQPublisher
 import DANE
 from DANE.config import cfg
+
+INDEX = cfg.ELASTICSEARCH.INDEX
 
 logger = logging.getLogger('DANE')
 logger.setLevel(cfg.LOGGING.LEVEL)

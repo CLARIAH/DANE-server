@@ -27,8 +27,6 @@ from DANE.config import cfg
 
 logger = logging.getLogger('DANE')
 
-INDEX = cfg.DANE_SERVER.ES_INDEX # 'dane-index' # TODO make configurable?
-
 class Handler(DANE.handlers.ESHandler):
 
     def __init__(self, config, queue):

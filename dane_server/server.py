@@ -23,7 +23,7 @@ from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import quote
 import requests
 
-from dane_server.handler import Handler, INDEX
+from dane_server.handler import Handler
 from dane_server.RabbitMQListener import RabbitMQListener
 from dane_server.RabbitMQPublisher import RabbitMQPublisher
 import DANE

@@ -1,4 +1,4 @@
-DANE
+git+https://github.com/CLARIAH/DANE.git@es-index-cfg
 Flask
 flask-restx
 elasticsearch

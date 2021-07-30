@@ -14,10 +14,10 @@ ELASTICSEARCH:
     USER: 'elastic' # change this for production mode
     PASSWORD: 'changeme' # change this for production mode
     SCHEME: 'http'
+    INDEX: 'dane-index-k8s-asr'
 LOGGING:
     DIR: "./dane-server-logs/"
     LEVEL: "DEBUG"
 DANE_SERVER:
     TEMP_FOLDER: "/mnt/dane-fs/input-files"
     OUT_FOLDER: "/mnt/dane-fs/output-files" # each worker should put his output in a subfolder of this dir
-    ES_INDEX: 'dane-index-k8s-asr' # configure a different index per DANE environment (when using the same ES cluster!)
