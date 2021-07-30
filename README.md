@@ -58,21 +58,6 @@ Examples of how to work with DANE can be found at: https://dane.readthedocs.io/e
 
 To run DANE-server, using Docker make sure to install a Docker Engine, e.g. Docker Desktop for OSX.
 
-## Create a base_config.yml
-
-Create the following file in ./dane_server/base_config.yml:
-
-```
-# now used for Docker only (change when running DANE-server locally)
-LOGGING:
-    DIR: "./dane-server-logs/"
-    LEVEL: "DEBUG"
-DANE_SERVER:
-    TEMP_FOLDER: "/tmp/DANE-data/TEMP/"
-    OUT_FOLDER: "/tmp/DANE-data/OUT/"
-
-```
-
 ## Build the Docker images
 
 As the DANE-server has two separate processes. Two images need to be created:
@@ -86,6 +71,8 @@ Run the following from the main directory of this repo:
 docker build -t dane-server -f Dockerfile.ts .
 docker build -t dane-server-api -f Dockerfile.api .
 ```
+
+**Note**: currently the build relies on the `es-index-cfg` branch of DANE (see `requirements.txt`)
 
 After the images have been successfully built, it is possible to run DANE-server via Kubernetes as well
 
