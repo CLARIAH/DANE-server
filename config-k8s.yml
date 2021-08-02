@@ -8,6 +8,8 @@ RABBITMQ:
     RESPONSE_QUEUE: 'DANE-response-queue'
     USER: 'guest' # change this for production mode
     PASSWORD: 'guest' # change this for production mode
+    MANAGEMENT_HOST: 'dane-rabbitmq-api.default.svc.cluster.local'
+    MANAGEMENT_PORT: 80
 ELASTICSEARCH:
     HOST: ['elasticsearch']
     PORT: 9200
