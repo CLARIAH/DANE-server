@@ -11,8 +11,8 @@ RABBITMQ:
 ELASTICSEARCH:
     HOST: ['elasticsearch']
     PORT: 9200
-    USER: 'elastic' # change this for production mode
-    PASSWORD: 'changeme' # change this for production mode
+    USER: '' # change this for production mode
+    PASSWORD: '' # change this for production mode
     SCHEME: 'http'
     INDEX: 'dane-index-k8s-asr'
 LOGGING:
