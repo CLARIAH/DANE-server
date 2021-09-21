@@ -4,3 +4,4 @@ flask-restx
 elasticsearch
 pika
 gunicorn==19.8.0
+requests

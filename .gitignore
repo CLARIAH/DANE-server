@@ -7,3 +7,7 @@ config.yml
 *.egg-info
 docs/_build/
 .ipynb_checkpoints/
+venv
+.DS_Store
+workers.json
+dane_server/dane-server-logs

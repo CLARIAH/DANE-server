@@ -1,0 +1,171 @@
+---
+apiVersion: v1 # -------------- HOOK UP EXTERNAL ELASTICSEARCH ------------------------------------
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9200
+      targetPort: 9200
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: elasticsearch
+subsets:
+  - addresses:
+    - ip: 'localhost' # your (external) ES host
+    ports:
+      - port: 9200
+---
+apiVersion: apps/v1 # -------------- RUN RABBITMQ ------------------------------
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+  labels:
+    app: dane-rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dane-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: dane-rabbitmq
+    spec:
+      containers:
+      - name: dane-rabbitmq-server
+        image: rabbitmq:3-management
+        ports:
+        - containerPort: 15672
+        - containerPort: 5672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dane-rabbitmq-management
+spec:
+  selector:
+    app: dane-rabbitmq
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dane-rabbitmq-api
+spec:
+  selector:
+    app: dane-rabbitmq
+  ports:
+    - protocol: TCP
+      port: 5672
+      targetPort: 5672
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dane-rabbitmq-ingress
+spec:
+  rules:
+  - host: rabbitmq.dane.nl # Note: change this to whatever domain you'd like to access the RabbitMQ
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dane-rabbitmq-management
+            port:
+              number: 80
+---
+apiVersion: apps/v1 # -------------- RUN DANE SERVER (TASK SCHEDULER ONLY) ------------
+kind: Deployment
+metadata:
+  name: dane-server-ts-deployment
+  labels:
+    app: dane-server-ts
+spec:
+  replicas: 1 # only one scheduler can run at a time, otherwise the queue will be disrupted!
+  selector:
+    matchLabels:
+      app: dane-server-ts
+  template:
+    metadata:
+      labels:
+        app: dane-server-ts
+    spec:
+      containers:
+      - name: dane-server
+        image: dane-server:latest
+        imagePullPolicy: Never
+        volumeMounts:
+        - name: dane-server-mnt
+          mountPath: "/root/.DANE"
+          readOnly: true
+      volumes:
+      - name: dane-server-mnt
+        configMap:
+          name: dane-server-cfg
+---
+apiVersion: apps/v1 # -------------- RUN DANE SERVER API -------------------------------
+kind: Deployment
+metadata:
+  name: dane-server-api-deployment
+  labels:
+    app: dane-server-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dane-server-api
+  template:
+    metadata:
+      labels:
+        app: dane-server-api
+    spec:
+      containers:
+      - name: dane-server-api
+        image: dane-server-api:latest
+        imagePullPolicy: Never
+        volumeMounts:
+        - name: dane-server-mnt
+          mountPath: "/root/.DANE"
+          readOnly: true
+      volumes:
+      - name: dane-server-mnt
+        configMap:
+          name: dane-server-cfg #Note: same config as task scheduler
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dane-server-api-service
+spec:
+  selector:
+    app: dane-server-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5500
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dane-server-ingress
+spec:
+  rules:
+  - host: api.dane.nl # Note: change this to whatever domain you'd like to access the DANE server
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dane-server-api-service
+            port:
+              number: 80

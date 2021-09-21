@@ -1,0 +1,25 @@
+DANE:
+    API_URL: 'http://localhost:5500/DANE/'
+    MANAGE_URL: 'http://localhost:5500/manage/'
+RABBITMQ:
+    HOST: 'dane-rabbitmq-api.default.svc.cluster.local'
+    PORT: 5672
+    EXCHANGE: 'DANE-exchange'
+    RESPONSE_QUEUE: 'DANE-response-queue'
+    USER: 'guest' # change this for production mode
+    PASSWORD: 'guest' # change this for production mode
+    MANAGEMENT_HOST: 'dane-rabbitmq-management.default.svc.cluster.local'
+    MANAGEMENT_PORT: 80
+ELASTICSEARCH:
+    HOST: ['elasticsearch']
+    PORT: 9200
+    USER: '' # change this for production mode
+    PASSWORD: '' # change this for production mode
+    SCHEME: 'http'
+    INDEX: 'dane-index-k8s-asr'
+LOGGING:
+    DIR: "./dane-server-logs/"
+    LEVEL: "DEBUG"
+DANE_SERVER:
+    TEMP_FOLDER: "/mnt/dane-fs/input-files"
+    OUT_FOLDER: "/mnt/dane-fs/output-files" # each worker should put his output in a subfolder of this dir
