@@ -10,4 +10,4 @@ docs/_build/
 venv
 .DS_Store
 workers.json
-dane_server/dane-server-logs
+logs

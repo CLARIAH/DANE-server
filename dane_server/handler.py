@@ -1,11 +1,11 @@
 # Copyright 2020-present, Netherlands Institute for Sound and Vision (Nanne van Noord)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #    http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,22 +13,13 @@
 # limitations under the License.
 ##############################################################################
 
-from elasticsearch import Elasticsearch
-from elasticsearch import exceptions as EX
-import json
-import os
 import logging
-from functools import partial
-from urllib.parse import urlsplit
+from dane.handlers import ESHandler
 
-import DANE.handlers
-from DANE import Task
-from DANE.config import cfg
+logger = logging.getLogger("DANE")
 
-logger = logging.getLogger('DANE')
 
-class Handler(DANE.handlers.ESHandler):
-
+class Handler(ESHandler):
     def __init__(self, config, queue):
         super().__init__(config, queue)
         self.queue.assign_callback(self.callback)
