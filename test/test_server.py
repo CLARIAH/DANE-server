@@ -1,17 +1,15 @@
 import unittest
-import DANE
-from DANE.config import cfg
+from dane import Document, Task
+from dane.config import cfg
 import threading
-from worker import test_worker
+from .worker import test_worker
 from time import sleep
-import sys
-import os
 
 from dane_server.handler import Handler
 from dane_server.RabbitMQListener import RabbitMQListener
 
-class TestBackend(unittest.TestCase):
 
+class TestBackend(unittest.TestCase):
     def test_backend(self):
 
         self.messageQueue = RabbitMQListener(cfg)
@@ -26,29 +24,23 @@ class TestBackend(unittest.TestCase):
         w_thread.setDaemon(True)
         w_thread.start()
 
-        doc = DANE.Document(
-            {
-                'id': 'UNITTEST123',
-                'url': 'http://127.0.0.1/example',
-                'type': 'Text'
-            },{
-                'id': 'TEST',
-                'type': 'Software'
-            }
-        ) 
+        doc = Document(
+            {"id": "UNITTEST123", "url": "http://127.0.0.1/example", "type": "Text"},
+            {"id": "TEST", "type": "Software"},
+        )
 
         doc.set_api(handler)
         doc.register()
 
         self.assertIsNotNone(doc._id)
 
-        task = DANE.Task('TEST')
+        task = Task("TEST")
         task.set_api(handler)
         task.assign(doc._id)
 
         # Wait for task to finish
         for _ in range(10):
-            sleep(1) 
+            sleep(1)
             task.refresh()
             if task.isDone():
                 # if task is done we can continue
@@ -67,17 +59,18 @@ class TestBackend(unittest.TestCase):
 
     def tearDown(self):
         # hacky way to ensure we dont delete a real exchange/queue
-        if 'TEST' in cfg.RABBITMQ.EXCHANGE:
+        if "TEST" in cfg.RABBITMQ.EXCHANGE:
             self.messageQueue.channel.exchange_delete(cfg.RABBITMQ.EXCHANGE)
-        if 'TEST' in cfg.RABBITMQ.RESPONSE_QUEUE:
+        if "TEST" in cfg.RABBITMQ.RESPONSE_QUEUE:
             self.messageQueue.channel.queue_delete(cfg.RABBITMQ.RESPONSE_QUEUE)
 
-        if hasattr(self, 'worker'):
+        if hasattr(self, "worker"):
             # delete the worker queue
             self.worker.channel.queue_delete(queue=self.worker.queue)
 
-        if hasattr(self, 'messageQueue'):
+        if hasattr(self, "messageQueue"):
             self.messageQueue.stop()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

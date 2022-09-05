@@ -1,0 +1,88 @@
+[tool.poetry]
+name = "DANE-server"
+version = "0.3.0"
+description = "Back-end for the Distributed Annotation 'n' Enrichment (DANE) system"
+readme = "README.md"
+authors = [
+    "Nanne van Noord <n.j.e.vannoord@uva.nl>",
+    "jblom <jblom@beeldengeluid.nl>"
+]
+license = "Apache License 2.0"
+repository = "https://github.com/CLARIAH/DANE"
+classifiers=[
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+]
+packages = [
+    { include = "dane_server" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+elasticsearch7 = "*"
+pika = "*"
+requests = "*"
+werkzeug = "<2.2.0"
+flask = "~=2.1.0"
+flask-restx = "*"
+dane = "^0.3.3"
+
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.971"
+mockito = "^1.4.0"
+pytest = "^7.1.2"
+black = "^22.8.0"
+flake8 = "^5.0.4"
+pytest-cov = "^3.0.0"
+types-requests = "^2.28.9"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = [
+  "test",
+]
+addopts = [
+#  "--cov",
+]
+
+[tool.coverage.run]
+omit = [
+  "test/*"
+]
+
+[tool.black]
+line-length = 88
+target_version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | build
+    | dist
+  )/
+)
+'''
+
+[tool.mypy]
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = [
+  'dane.*',
+  'mockito',
+  'pika',
+  'yaml',
+  'yacs.*',
+  'flask_restx.*',
+]
+ignore_missing_imports = true
