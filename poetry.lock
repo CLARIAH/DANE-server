@@ -106,7 +106,7 @@ toml = ["tomli"]
 
 [[package]]
 name = "dane"
-version = "0.3.2"
+version = "0.3.3"
 description = "Utils for working with the Distributed Annotation and Enrichment system"
 category = "main"
 optional = false
@@ -541,7 +541,7 @@ PyYAML = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "b6c99f1c20acace86f1e2569b12fbbf02b7c8d10930aeee4fc21faec71c0040b"
+content-hash = "fc109420c6596ae7bf3e0a236a0ce60705fa183655562f57fb9ced2b15ec4610"
 
 [metadata.files]
 aniso8601 = []
@@ -562,10 +562,7 @@ colorama = [
     {file = "colorama-0.4.5.tar.gz", hash = "sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4"},
 ]
 coverage = []
-dane = [
-    {file = "DANE-0.3.2-py3-none-any.whl", hash = "sha256:4f18482d8cd505814baf23e7018c0bb9b998b3fa37e1c8f5c8dddf210acb8225"},
-    {file = "DANE-0.3.2.tar.gz", hash = "sha256:1f314425c809708ff39854038b14cba9a7b3e9689d27468e15d64e1e47d03595"},
-]
+dane = []
 elasticsearch7 = []
 flake8 = []
 flask = []

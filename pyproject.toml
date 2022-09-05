@@ -22,13 +22,13 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-dane = "^0.3.2"
 elasticsearch7 = "*"
 pika = "*"
 requests = "*"
 werkzeug = "<2.2.0"
 flask = "~=2.1.0"
 flask-restx = "*"
+dane = "^0.3.3"
 
 
 [tool.poetry.dev-dependencies]
