@@ -28,7 +28,7 @@ requests = "*"
 werkzeug = "<2.2.0"
 flask = "~=2.1.0"
 flask-restx = "*"
-dane = "^0.3.3"
+dane = "^0.3.4"
 
 
 [tool.poetry.dev-dependencies]

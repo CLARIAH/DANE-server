@@ -106,7 +106,7 @@ toml = ["tomli"]
 
 [[package]]
 name = "dane"
-version = "0.3.3"
+version = "0.3.4"
 description = "Utils for working with the Distributed Annotation and Enrichment system"
 category = "main"
 optional = false
@@ -115,6 +115,7 @@ python-versions = ">=3.10,<4.0"
 [package.dependencies]
 elasticsearch7 = ">=7.17.3,<8.0.0"
 pika = ">=1.2.1,<2.0.0"
+requests = ">=2.28.1,<3.0.0"
 yacs = ">=0.1.8,<0.2.0"
 
 [[package]]
@@ -541,7 +542,7 @@ PyYAML = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "fc109420c6596ae7bf3e0a236a0ce60705fa183655562f57fb9ced2b15ec4610"
+content-hash = "a8c08baafa73fb007b80aeec7534a07475bfe997e659fa49f6fe5508ae69a12e"
 
 [metadata.files]
 aniso8601 = []
