@@ -74,6 +74,7 @@ ns_task = api.namespace("task", description="Task operations")
 ns_result = api.namespace("result", description="Result operations")
 ns_workers = api.namespace("workers", description="Worker operations")
 ns_search = api.namespace("search", description="Search operations")
+ns_creator = api.namespace("creator", description="Creator/batch operations")
 
 """------------------------------------------------------------------------------
 REGULAR ROUTING
@@ -797,6 +798,32 @@ class WorkersAPI(Resource):
             return {"total": 0, "error": e}
 
 
+@ns_creator.route("/<creator_id>/tasks")
+class CreatorTasksAPI(Resource):
+    @ns_creator.marshal_with(_task, as_list=True)
+    def get(self, creator_id):
+        try:
+            tasks = get_handler().get_tasks_of_creator(creator_id, [])
+        except Exception:
+            logger.exception("Unhandled Error")
+            abort(500)
+        else:
+            return tasks
+
+
+@ns_creator.route("/<creator_id>/results")
+class CreatorResultsAPI(Resource):
+    @ns_creator.marshal_with(_result, as_list=True)
+    def get(self, creator_id):
+        try:
+            results = get_handler().get_results_of_creator(creator_id, [])
+        except Exception:
+            logger.exception("Unhandled Error")
+            abort(500)
+        else:
+            return results
+
+
 """------------------------------------------------------------------------------
 DevOPs checks
 ------------------------------------------------------------------------------"""
@@ -857,14 +884,23 @@ app.register_blueprint(bp, url_prefix="/DANE")
 
 def get_queue():
     if "messageQueue" not in g:
-        g.messageQueue = RabbitMQPublisher(cfg)
-    return g.messageQueue
+        try:
+            g.messageQueue = RabbitMQPublisher(cfg)
+            return g.messageQueue
+        except Exception:
+            logger.exception("Could not connect to queue")
+    return None
 
 
 def get_handler():
     if "handler" not in g:
         g.handler = Handler(config=cfg, queue=get_queue())
-        get_queue().assign_callback(g.handler.callback)
+        queue = get_queue()
+        if queue:
+            logger.info("Got a valid queue, assigning the callback handler")
+            queue.assign_callback(g.handler.callback)
+        else:
+            logger.warning("Continuing without a working queue!!")
     return g.handler
 
 
