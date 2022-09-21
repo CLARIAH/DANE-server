@@ -16,6 +16,7 @@
 import pika
 import logging
 from dane.handlers import RabbitMQHandler
+from dane.state import ProcState
 
 logger = logging.getLogger("DANE")
 
@@ -31,7 +32,10 @@ class RabbitMQPublisher(RabbitMQHandler):
         try:
             super().publish(routing_key, task, document, retry)
         except pika.exceptions.UnroutableError:
-            fail_resp = {"state": 422, "message": "Unroutable task"}
+            fail_resp = {
+                "state": ProcState.NO_ROUTE_TO_QUEUE.value,
+                "message": "Unroutable task",
+            }
             self.callback(task._id, fail_resp)
             pass
         except Exception as e:

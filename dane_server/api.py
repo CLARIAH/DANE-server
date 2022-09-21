@@ -30,7 +30,7 @@ import requests
 
 from dane.handlers import ESHandler as Handler
 from dane_server.RabbitMQPublisher import RabbitMQPublisher
-from dane import Document, Task
+from dane import Document, Task, ProcState
 from dane.config import cfg
 from dane.errors import DocumentExistsError, TaskExistsError, ResultExistsError
 
@@ -741,10 +741,11 @@ class WorkersAPI(Resource):
                         }
                     ],
                     "must_not": [
-                        {"match": {"task.state": 102}},
-                        {"match": {"task.state": 200}},
-                        {"match": {"task.state": 201}},
-                        {"match": {"task.state": 412}},
+                        {"match": {"task.state": ProcState.QUEUED.value}},
+                        {"match": {"task.state": ProcState.PROCESSING.value}},
+                        {"match": {"task.state": ProcState.SUCCESS.value}},
+                        {"match": {"task.state": ProcState.CREATED.value}},
+                        {"match": {"task.state": ProcState.UNFINISHED_DEPENDENCY}},
                     ],
                 }
             },
@@ -766,7 +767,7 @@ class WorkersAPI(Resource):
 
 @ns_workers.route("/<task_key>/reset")
 @ns_workers.route("/<task_key>/reset/<task_state>")
-class WorkersAPI(Resource):
+class WorkerResetAPI(Resource):
     @ns_doc.marshal_with(_massResetResult)
     def get(self, task_key, task_state=500):
 
@@ -781,7 +782,7 @@ class WorkersAPI(Resource):
                 }
             },
             "script": {
-                "source": "ctx._source['task']['state'] = 205; ctx._source['task']['msg'] = 'Manual reset';"
+                "source": f"ctx._source['task']['state'] = {ProcState.TASK_RESET.value}; ctx._source['task']['msg'] = 'Manual reset';"
             },
         }
 
