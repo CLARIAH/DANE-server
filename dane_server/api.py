@@ -799,12 +799,12 @@ class WorkerResetAPI(Resource):
             return {"total": 0, "error": e}
 
 
-@ns_creator.route("/<creator_id>/tasks")
+@ns_creator.route("/<creator_id>/<task_key>/tasks")
 class CreatorTasksAPI(Resource):
     @ns_creator.marshal_with(_task, as_list=True)
-    def get(self, creator_id):
+    def get(self, creator_id, task_key):
         try:
-            tasks = get_handler().get_tasks_of_creator(creator_id, [])
+            tasks = get_handler().get_tasks_of_creator(creator_id, task_key, [])
         except Exception:
             logger.exception("Unhandled Error")
             abort(500)
@@ -812,12 +812,12 @@ class CreatorTasksAPI(Resource):
             return tasks
 
 
-@ns_creator.route("/<creator_id>/results")
+@ns_creator.route("/<creator_id>/<task_key>/results")
 class CreatorResultsAPI(Resource):
     @ns_creator.marshal_with(_result, as_list=True)
-    def get(self, creator_id):
+    def get(self, creator_id, task_key):
         try:
-            results = get_handler().get_results_of_creator(creator_id, [])
+            results = get_handler().get_results_of_creator(creator_id, task_key, [])
         except Exception:
             logger.exception("Unhandled Error")
             abort(500)
