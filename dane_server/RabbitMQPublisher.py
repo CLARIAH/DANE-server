@@ -25,9 +25,6 @@ class RabbitMQPublisher(RabbitMQHandler):
     def __init__(self, config):
         super().__init__(config)
 
-    def assign_callback(self, callback):
-        self.callback = callback
-
     def publish(self, routing_key, task, document, retry=False):
         try:
             super().publish(routing_key, task, document, retry)

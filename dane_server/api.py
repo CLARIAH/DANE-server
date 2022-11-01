@@ -742,7 +742,7 @@ class WorkersAPI(Resource):
                     ],
                     "must_not": [
                         {"match": {"task.state": ProcState.QUEUED.value}},
-                        {"match": {"task.state": ProcState.PROCESSING.value}},
+                        # {"match": {"task.state": ProcState.PROCESSING.value}}, TODO later
                         {"match": {"task.state": ProcState.SUCCESS.value}},
                         {"match": {"task.state": ProcState.CREATED.value}},
                         {"match": {"task.state": ProcState.UNFINISHED_DEPENDENCY}},

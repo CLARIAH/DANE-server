@@ -62,10 +62,12 @@ def main():
     if "SUPERVISOR_PROCESS_NAME" not in os.environ or os.environ[
         "SUPERVISOR_PROCESS_NAME"
     ].endswith("_00"):
-        publishQueue = RabbitMQPublisher(cfg)
-        s_handler = Handler(config=cfg, queue=publishQueue)
+        # The Handler wraps an ESHandler and assigns a RabbitMQPublisher as queue
+        es_handler_with_queue = Handler(config=cfg, queue=RabbitMQPublisher(cfg))
         # TODO make interval configable
-        scheduler = TaskScheduler(handler=s_handler, logger=logger, interval=5)
+        scheduler = TaskScheduler(
+            handler=es_handler_with_queue, logger=logger, interval=5
+        )
         scheduler.start()
     else:
         logger.info(
