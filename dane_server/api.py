@@ -799,6 +799,19 @@ class WorkerResetAPI(Resource):
             return {"total": 0, "error": e}
 
 
+@ns_creator.route("/<creator_id>/docs")
+class CreatorDocsAPI(Resource):
+    @ns_creator.marshal_with(_document, as_list=True)
+    def get(self, creator_id):
+        try:
+            docs = get_handler().get_docs_of_creator(creator_id, [])
+        except Exception:
+            logger.exception("Unhandled Error")
+            abort(500)
+        else:
+            return docs
+
+
 @ns_creator.route("/<creator_id>/<task_key>/tasks")
 class CreatorTasksAPI(Resource):
     @ns_creator.marshal_with(_task, as_list=True)
@@ -895,6 +908,7 @@ def get_queue():
 
 def get_handler():
     if "handler" not in g:
+        logger.info("No handler assigned yet, assigning it now")
         g.handler = Handler(config=cfg, queue=get_queue())
         queue = get_queue()
         if queue:
