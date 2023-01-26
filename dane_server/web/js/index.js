@@ -167,7 +167,7 @@ Vue.component('dane-doc-searchbar', {
     search: function() {
       let t = ((this.target.length > 0) ? this.target : '*');
       let c = ((this.creator.length > 0) ? this.creator : '*');
-      fetch(new URL(`search/document?target_id=${t}&creator_id=${c}`, Config.API).href) 
+      fetch(new URL(`search/document?target_id=${t}&creator_id=${c}`, Config.API).href, { redirect: 'follow' }) 
         .then((resp) => {
           if (!resp.ok) {
             this.docs = [];
