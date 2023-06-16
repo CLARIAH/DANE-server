@@ -11,3 +11,4 @@ venv
 .DS_Store
 workers.json
 logs
+/dane-server-logs
