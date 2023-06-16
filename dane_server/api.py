@@ -30,7 +30,7 @@ import requests
 
 from dane.handlers import ESHandler as Handler
 from dane_server.RabbitMQPublisher import RabbitMQPublisher
-from dane import Document, Task
+from dane import Document, Task, ProcState
 from dane.config import cfg
 from dane.errors import DocumentExistsError, TaskExistsError, ResultExistsError
 
@@ -74,6 +74,7 @@ ns_task = api.namespace("task", description="Task operations")
 ns_result = api.namespace("result", description="Result operations")
 ns_workers = api.namespace("workers", description="Worker operations")
 ns_search = api.namespace("search", description="Search operations")
+ns_creator = api.namespace("creator", description="Creator/batch operations")
 
 """------------------------------------------------------------------------------
 REGULAR ROUTING
@@ -740,10 +741,11 @@ class WorkersAPI(Resource):
                         }
                     ],
                     "must_not": [
-                        {"match": {"task.state": 102}},
-                        {"match": {"task.state": 200}},
-                        {"match": {"task.state": 201}},
-                        {"match": {"task.state": 412}},
+                        {"match": {"task.state": ProcState.QUEUED.value}},
+                        # {"match": {"task.state": ProcState.PROCESSING.value}}, TODO later
+                        {"match": {"task.state": ProcState.SUCCESS.value}},
+                        {"match": {"task.state": ProcState.CREATED.value}},
+                        {"match": {"task.state": ProcState.UNFINISHED_DEPENDENCY}},
                     ],
                 }
             },
@@ -765,7 +767,7 @@ class WorkersAPI(Resource):
 
 @ns_workers.route("/<task_key>/reset")
 @ns_workers.route("/<task_key>/reset/<task_state>")
-class WorkersAPI(Resource):
+class WorkerResetAPI(Resource):
     @ns_doc.marshal_with(_massResetResult)
     def get(self, task_key, task_state=500):
 
@@ -780,7 +782,7 @@ class WorkersAPI(Resource):
                 }
             },
             "script": {
-                "source": "ctx._source['task']['state'] = 205; ctx._source['task']['msg'] = 'Manual reset';"
+                "source": f"ctx._source['task']['state'] = {ProcState.TASK_RESET.value}; ctx._source['task']['msg'] = 'Manual reset';"
             },
         }
 
@@ -795,6 +797,45 @@ class WorkersAPI(Resource):
         except Exception as e:
             logger.exception("Mass reset error")
             return {"total": 0, "error": e}
+
+
+@ns_creator.route("/<creator_id>/docs")
+class CreatorDocsAPI(Resource):
+    @ns_creator.marshal_with(_document, as_list=True)
+    def get(self, creator_id):
+        try:
+            docs = get_handler().get_docs_of_creator(creator_id, [])
+        except Exception:
+            logger.exception("Unhandled Error")
+            abort(500)
+        else:
+            return docs
+
+
+@ns_creator.route("/<creator_id>/<task_key>/tasks")
+class CreatorTasksAPI(Resource):
+    @ns_creator.marshal_with(_task, as_list=True)
+    def get(self, creator_id, task_key):
+        try:
+            tasks = get_handler().get_tasks_of_creator(creator_id, task_key, [])
+        except Exception:
+            logger.exception("Unhandled Error")
+            abort(500)
+        else:
+            return tasks
+
+
+@ns_creator.route("/<creator_id>/<task_key>/results")
+class CreatorResultsAPI(Resource):
+    @ns_creator.marshal_with(_result, as_list=True)
+    def get(self, creator_id, task_key):
+        try:
+            results = get_handler().get_results_of_creator(creator_id, task_key, [])
+        except Exception:
+            logger.exception("Unhandled Error")
+            abort(500)
+        else:
+            return results
 
 
 """------------------------------------------------------------------------------
@@ -857,14 +898,24 @@ app.register_blueprint(bp, url_prefix="/DANE")
 
 def get_queue():
     if "messageQueue" not in g:
-        g.messageQueue = RabbitMQPublisher(cfg)
-    return g.messageQueue
+        try:
+            g.messageQueue = RabbitMQPublisher(cfg)
+            return g.messageQueue
+        except Exception:
+            logger.exception("Could not connect to queue")
+    return None
 
 
 def get_handler():
     if "handler" not in g:
+        logger.info("No handler assigned yet, assigning it now")
         g.handler = Handler(config=cfg, queue=get_queue())
-        get_queue().assign_callback(g.handler.callback)
+        queue = get_queue()
+        if queue:
+            logger.info("Got a valid queue, assigning the callback handler")
+            queue.assign_callback(g.handler.callback)
+        else:
+            logger.warning("Continuing without a working queue!!")
     return g.handler
 
 

@@ -22,4 +22,5 @@ logger = logging.getLogger("DANE")
 class Handler(ESHandler):
     def __init__(self, config, queue):
         super().__init__(config, queue)
+        # assigns the ESHandler.callback() to the RabbitMQPublisher
         self.queue.assign_callback(self.callback)

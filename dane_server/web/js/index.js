@@ -263,7 +263,7 @@ Vue.component('dane-tasklist', {
       colour: function(s) {
         if ([200].includes(parseInt(s))) {
           return 'green';
-        } else if ([102, 201, 205].includes(parseInt(s))) {
+        } else if ([102, 202, 201, 205].includes(parseInt(s))) {
           return 'yellow';
         } else {
           return 'red';
